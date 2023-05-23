@@ -1,1 +1,2 @@
 # ReinventTheWheel
+暂时计划实现内存池MemoryPool和线程池ThreadPool
