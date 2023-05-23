@@ -1,2 +1,14 @@
 # ReinventTheWheel
-暂时计划实现内存池MemoryPool和线程池ThreadPool
+
+
+结构目录如下：  
++ ~~MemoryPool~~
++ ~~ThreadPool~~
++ LinuxCommand  
+    - ls
+    - pwd
+    - yes
+  
+MemoryPool为内存池  
+ThreadPool为线程池  
+LinuxCommand为部分linux命令
