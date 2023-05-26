@@ -5,100 +5,112 @@
 #ifndef MEMORYPOOL_MEMORYPOOL_HPP
 #define MEMORYPOOL_MEMORYPOOL_HPP
 #include <iostream>
-#include <vector>
-#include <algorithm>
-#include <memory>
-#include <map>
+struct BitMapNode;
 
-#include <iostream>
-#include <thread>
-#include <chrono>
-
-
-using namespace std;
+struct ListNode {
+    BitMapNode *address = nullptr;
+    ListNode *next = nullptr;
+    ListNode *pre = nullptr;
+};
+struct BitMapNode {
+    bool flag = true;
+    ListNode *address = nullptr;
+};
+static ListNode* CreateList(ListNode &pre, size_t level, size_t len) {
+    if (level > len) {
+        return &pre;
+    }
+    auto cur = new ListNode;
+    pre.next = cur;
+    cur->pre = &pre;
+    CreateList(*cur,level + 1,len);
+}
 class MemoryPool {
-	size_t _memory_block_size = 4;
-	size_t _memory_pool_size = 10240;
-	void* _memory_pool_address = nullptr;
+	size_t _block_size = 128;
+	size_t _pool_size = 10240;
+    size_t _bit_map_size = 0;
+    BitMapNode * _bit_map = nullptr;
+    ListNode *_free_node = nullptr;
+    ListNode *_alloc_node = nullptr;
+    void *_pool_address = nullptr;
 
-	void* _bit_map_address = nullptr;
-	size_t _bit_map_size = 0;
-	MemoryPool(size_t memory_size = 10240) {
-		_memory_pool_size = memory_size;
-		_memory_pool_address = malloc(_memory_pool_size);
-		_bit_map_size = _memory_pool_size / _memory_block_size;	// 此处位图简单实现，使用byte代替bit
-		_bit_map_address = calloc(_bit_map_size,sizeof(char));
+
+	MemoryPool(size_t memory_pool_size = 10240,size_t memory_block_size = 4) {
+		_pool_size = memory_pool_size;
+        _block_size = memory_pool_size;
+        _pool_address = malloc(_pool_size);
+        _bit_map_size = _pool_size / _block_size;
+        _bit_map = (BitMapNode *)calloc(_bit_map_size,sizeof(BitMapNode));
+
+
+        // 构造list,此处实际构造的链表长度为_bitmap_size + 1
+        // free_node -> ... -> alloc_node -> nullptr
+        _free_node = (ListNode *)malloc(sizeof(ListNode));
+        _alloc_node = CreateList(*_free_node,2,_bit_map_size);
+
+        // 构造bitmap 和 list 的映射关系
+        auto &tmp = _free_node;
+        for (int i = 0;i < _bit_map_size; ++i) {
+            _bit_map[i].address = tmp;
+            tmp->address = &_bit_map[i];    // &(_bit_map[i])
+        }
 	}
 	MemoryPool(const MemoryPool&) = default;
 	MemoryPool& operator = (const MemoryPool&) = default;
 public:
 	~MemoryPool() {
-		free(_memory_pool_address);
-		_memory_pool_address = nullptr;
-		free(_bit_map_address);
-		_bit_map_address = nullptr;
 	}
 	static MemoryPool& GetInstance() {
 		static MemoryPool *instance = nullptr;
 		if (instance == nullptr) {
 			instance = (MemoryPool *)malloc(sizeof(MemoryPool));
-			instance->MemoryPool::MemoryPool();//手动构造
+            new (instance) MemoryPool;
+			// instance->MemoryPool::MemoryPool();//手动构造
 		}
 		return *instance;
 	}
 
 	void* Malloc(size_t size) {
-		if (size > 4) {
+		if (size > _block_size) {
 			return malloc(size);
 		}
-		for (int i = 0; i < _bit_map_size; ++i) {
-			// 可以分配
-			if (((char*)_bit_map_address)[i] == 0) {
-				*((char*)_bit_map_address + i) = 1;
-				return (char *)_memory_pool_address + i;
-			}
-		}
-		// 无可分配内存；
-		return malloc(size);
-
+        // 修改list
+        auto tmp = _free_node;
+        _alloc_node->next = tmp;
+        tmp->pre = _alloc_node;
+        _free_node = _free_node->next;
+        _free_node->pre = nullptr;
+        tmp->next = nullptr;
+        // 修改bitmap
+        auto bitmap_node = tmp->address;
+        bitmap_node->flag = false;
+        auto index = bitmap_node - _bit_map;    // 相同类型指针相减结果自动/sizeof(type)
+        return (char *)_pool_address + _block_size * index;
 	}
 	void Delete(void *ptr) {
-		if (ptr < _memory_pool_address 
-		|| ptr >= (char *)_memory_pool_address + _memory_pool_size) {
+        // 不在内存池中
+		if (ptr < _pool_address
+		|| ptr >= (char *)_pool_address + _pool_size) {
 			return free(ptr);
 		}
 
-		int index = (intptr_t)ptr - (intptr_t)_memory_pool_address;
-		((char*)_bit_map_address)[index] = 0;
-		return;
+        auto index = (char *)ptr - (char *)_pool_address;
+        auto node = _bit_map[index].address;
+        if (node->next == nullptr) {
+            node->pre->next = nullptr;
+        }
+        else {
+            node->pre->next = node->next;
+            node->next->pre = node->pre;
+        }
+        node->next = _free_node;
+        _free_node->pre = node;
+        _free_node = node;
+
+        _bit_map[index].flag = true;
 	}
 
 };
 
-
-//void* operator new(size_t size) {
-//	return MemoryPool::GetInstance().Malloc(size);
-//}
-//void* operator new[](size_t size) {
-//	return MemoryPool::GetInstance().Malloc(size);
-//}
-//void operator delete(void* ptr) {
-//	return MemoryPool::GetInstance().Delete(ptr);
-//}
-//void operator delete[](void* ptr) {
-//	return MemoryPool::GetInstance().Delete(ptr);
-//}
-
-void Test() {
-	vector <int*> vec(2550);
-	for (auto& p : vec) {
-		p = new int;
-	}
-
-	for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-		delete *it;
-	}
-	return;
-}
 
 #endif //MEMORYPOOL_MEMORYPOOL_HPP
