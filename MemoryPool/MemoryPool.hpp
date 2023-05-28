@@ -1,113 +1,88 @@
-//
-// Created by yongheng on 23-5-23.
-//
+/*******************************************************************************
+ * Author : yongheng
+ * Data   : 2023/5/28
+*******************************************************************************/
 
 #ifndef MEMORYPOOL_MEMORYPOOL_HPP
 #define MEMORYPOOL_MEMORYPOOL_HPP
 #include <iostream>
-struct BitMapNode;
 
-struct ListNode {
-    BitMapNode *address = nullptr;
-    ListNode *next = nullptr;
-    ListNode *pre = nullptr;
-};
-struct BitMapNode {
-    bool flag = true;
-    ListNode *address = nullptr;
-};
-static ListNode* CreateList(ListNode &pre, size_t level, size_t len) {
-    if (level > len) {
-        return &pre;
+static void *_Malloc(size_t size) {
+    void *ret_p = malloc(size);
+    if (ret_p == nullptr) {
+        throw std::bad_alloc();
     }
-    auto cur = new ListNode;
-    pre.next = cur;
-    cur->pre = &pre;
-    CreateList(*cur,level + 1,len);
+    return ret_p;
 }
+
+
 class MemoryPool {
-	size_t _block_size = 128;
-	size_t _pool_size = 10240;
-    size_t _bit_map_size = 0;
-    BitMapNode * _bit_map = nullptr;
-    ListNode *_free_node = nullptr;
-    ListNode *_alloc_node = nullptr;
-    void *_pool_address = nullptr;
+	size_t _block_size = 4;
+    size_t _block_nums = 1024;
+    size_t _bit_map_len = 0;
+    void *_memory_pool = nullptr;
+    bool *_bit_map = nullptr;
+    void *_free_stack = nullptr;
+    size_t _index = 0;
 
 
-	MemoryPool(size_t memory_pool_size = 10240,size_t memory_block_size = 4) {
-		_pool_size = memory_pool_size;
-        _block_size = memory_pool_size;
-        _pool_address = malloc(_pool_size);
-        _bit_map_size = _pool_size / _block_size;
-        _bit_map = (BitMapNode *)calloc(_bit_map_size,sizeof(BitMapNode));
+	MemoryPool(size_t memory_block_size = 4,
+               size_t memory_block_nums = 1024) :
+               _block_size(memory_block_size),
+               _block_nums(memory_block_nums) {
 
+        _bit_map_len = memory_block_nums;
+        _memory_pool = _Malloc(_block_nums * _block_size);
+        _bit_map = (bool *)_Malloc(sizeof(bool) * _bit_map_len);
+        std::fill(_bit_map,_bit_map + _bit_map_len,true);
+        _free_stack = _Malloc(sizeof(void *) * _bit_map_len);
+        std::fill((char *)_free_stack,((char *)_free_stack + _bit_map_len), (unsigned)0);
 
-        // 构造list,此处实际构造的链表长度为_bitmap_size + 1
-        // free_node -> ... -> alloc_node -> nullptr
-        _free_node = (ListNode *)malloc(sizeof(ListNode));
-        _alloc_node = CreateList(*_free_node,2,_bit_map_size);
-
-        // 构造bitmap 和 list 的映射关系
-        auto &tmp = _free_node;
-        for (int i = 0;i < _bit_map_size; ++i) {
-            _bit_map[i].address = tmp;
-            tmp->address = &_bit_map[i];    // &(_bit_map[i])
+        for (int i = 0;i < _block_nums; ++i) {
+            ((char **)_free_stack)[i] = (char *)_memory_pool + i;
         }
+        _index = _block_nums - 1;
+
 	}
 	MemoryPool(const MemoryPool&) = default;
 	MemoryPool& operator = (const MemoryPool&) = default;
 public:
 	~MemoryPool() {
+        delete[] _bit_map;
+        _bit_map = nullptr;
+        free(_memory_pool);
+        _memory_pool = nullptr;
+        free(_free_stack);
+        _free_stack = nullptr;
 	}
 	static MemoryPool& GetInstance() {
 		static MemoryPool *instance = nullptr;
 		if (instance == nullptr) {
 			instance = (MemoryPool *)malloc(sizeof(MemoryPool));
-            new (instance) MemoryPool;
-			// instance->MemoryPool::MemoryPool();//手动构造
+            new (instance) MemoryPool(4,10240);
 		}
 		return *instance;
 	}
 
-	void* Malloc(size_t size) {
-		if (size > _block_size) {
-			return malloc(size);
-		}
-        // 修改list
-        auto tmp = _free_node;
-        _alloc_node->next = tmp;
-        tmp->pre = _alloc_node;
-        _free_node = _free_node->next;
-        _free_node->pre = nullptr;
-        tmp->next = nullptr;
-        // 修改bitmap
-        auto bitmap_node = tmp->address;
-        bitmap_node->flag = false;
-        auto index = bitmap_node - _bit_map;    // 相同类型指针相减结果自动/sizeof(type)
-        return (char *)_pool_address + _block_size * index;
-	}
+    void* Malloc(size_t size) {
+        if (_index > _block_nums || size > _block_size) {
+            return malloc(size);
+        }
+
+        void * ret = (void *)*((intptr_t *)_free_stack + _index);
+        _bit_map[_index] = false;
+        *((intptr_t **)_free_stack + _index) = nullptr;
+        _index --;
+        return ret;
+    }
 	void Delete(void *ptr) {
-        // 不在内存池中
-		if (ptr < _pool_address
-		|| ptr >= (char *)_pool_address + _pool_size) {
-			return free(ptr);
-		}
-
-        auto index = (char *)ptr - (char *)_pool_address;
-        auto node = _bit_map[index].address;
-        if (node->next == nullptr) {
-            node->pre->next = nullptr;
+        if (ptr < _memory_pool || ptr > (char *)_memory_pool + _block_size * _block_nums) {
+            free (ptr);
         }
-        else {
-            node->pre->next = node->next;
-            node->next->pre = node->pre;
-        }
-        node->next = _free_node;
-        _free_node->pre = node;
-        _free_node = node;
 
-        _bit_map[index].flag = true;
+        int index = ((char *)ptr - (char *)_memory_pool) / _block_size;
+        _bit_map[index] = true;
+        *((intptr_t **)_free_stack + _index++) = (intptr_t*)ptr;
 	}
 
 };
