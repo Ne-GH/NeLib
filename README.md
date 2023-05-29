@@ -2,7 +2,7 @@
 
 
 结构目录如下：  
-+ ~~MemoryPool~~
++ MemoryPool
 + ~~ThreadPool~~
 + LinuxCommand  
     - ls
