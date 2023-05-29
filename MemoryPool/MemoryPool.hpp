@@ -59,7 +59,7 @@ public:
 		static MemoryPool *instance = nullptr;
 		if (instance == nullptr) {
 			instance = (MemoryPool *)malloc(sizeof(MemoryPool));
-            new (instance) MemoryPool(4,10240);
+            new (instance) MemoryPool(8,10240);
 		}
 		return *instance;
 	}
