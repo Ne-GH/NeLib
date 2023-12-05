@@ -46,6 +46,9 @@ public:
 };
 
 
+export enum class TimeType {
+    YEAR,MONTH,DAY
+};
 
 export class Timer {
     std::chrono::year_month_day ymd{};
@@ -55,11 +58,21 @@ public:
         ymd = std::chrono::year_month_day(year.year,month.month,day.day);
     }
 
-    int Count() {
-        return std::chrono::sys_days(ymd).time_since_epoch().count();
+    int Count(TimeType type = TimeType::DAY) {
+        switch (type) {
+            case TimeType::YEAR:
+                return std::chrono::duration_cast<std::chrono::years>( std::chrono::sys_days(ymd).time_since_epoch()).count();
+            case TimeType::MONTH:
+                return std::chrono::duration_cast<std::chrono::months>( std::chrono::sys_days(ymd).time_since_epoch()).count();
+            case TimeType::DAY:
+                return std::chrono::duration_cast<std::chrono::days>( std::chrono::sys_days(ymd).time_since_epoch()).count();
+            default:
+                return 0;
+        }
     }
-
-
+    int operator - (Timer& t) {
+        return Count() - t.Count();
+    }
 };
 
 export NAMESPACE_BEGIN(TimerLiterals)
