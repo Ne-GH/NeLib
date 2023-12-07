@@ -4,6 +4,7 @@
 *******************************************************************************/
 
 module;
+#include <iostream>
 #include <chrono>
 export module Timer;
 
@@ -18,10 +19,10 @@ export class Year {
     friend Timer;
     std::chrono::year year{};
 public:
-    Year(int arg) {
+    explicit Year(int arg) {
         year = std::chrono::year(arg);
     }
-    Year(const char *arg) : Year(std::stoi(arg)) {  }
+    explicit Year(const char *arg) : Year(std::stoi(arg)) {  }
 
 };
 export class Month {
@@ -57,23 +58,28 @@ public:
     explicit Timer(const Year&& year,const Month&& month,const Day&& day) {
         ymd = std::chrono::year_month_day(year.year,month.month,day.day);
     }
+    explicit Timer(std::chrono::year_month_day arg) : ymd(arg) {  }
 
-    int Count(TimeType type = TimeType::DAY) {
-        switch (type) {
-            case TimeType::YEAR:
-                return std::chrono::duration_cast<std::chrono::years>( std::chrono::sys_days(ymd).time_since_epoch()).count();
-            case TimeType::MONTH:
-                return std::chrono::duration_cast<std::chrono::months>( std::chrono::sys_days(ymd).time_since_epoch()).count();
-            case TimeType::DAY:
-                return std::chrono::duration_cast<std::chrono::days>( std::chrono::sys_days(ymd).time_since_epoch()).count();
-            default:
-                return 0;
-        }
+    long Count(TimeType type = TimeType::DAY) {
+        return std::chrono::sys_days(ymd).time_since_epoch().count();
     }
-    int operator - (Timer& t) {
+    long operator - (Timer& t) {
         return Count() - t.Count();
     }
+
+    friend std::ostream & operator << (std::ostream &out,Timer timer);
+
 };
+
+export Timer Now() {
+    using namespace std::chrono;
+    return Timer(std::chrono::year_month_day{floor<days>(system_clock::now())});
+}
+std::ostream &operator << (std::ostream &out,const Timer timer) {
+    out << timer.ymd;
+    return out;
+}
+
 
 export NAMESPACE_BEGIN(TimerLiterals)
 Year operator "" _Y(const char *year) {
