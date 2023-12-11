@@ -12,11 +12,11 @@ export module Timer;
 #define NAMESPACE_END(name) }
 
 
-NAMESPACE_BEGIN(Timer)
-export class Timer;
+NAMESPACE_BEGIN(Date)
+export class Date;
 
 export class Year {
-    friend Timer;
+    friend Date;
     std::chrono::year year{};
 public:
     explicit Year(int arg) {
@@ -26,7 +26,7 @@ public:
 
 };
 export class Month {
-    friend Timer;
+    friend Date;
     std::chrono::month month{};
 public:
     explicit Month(int arg) {
@@ -35,7 +35,7 @@ public:
     explicit Month(const char *arg) : Month(std::stoi(arg)) {  }
 };
 export class Day {
-    friend Timer;
+    friend Date;
     std::chrono::day day{};
 public:
     explicit Day(int arg) {
@@ -45,11 +45,58 @@ public:
 
 
 };
+export class Date {
+    std::chrono::year_month_day ymd{};
+public:
+    Date() {
+        using namespace std::chrono;
+        ymd = year_month_day(floor<days>(system_clock::now()));
+    }
+    explicit Date(const Year&& year,const Month&& month,const Day&& day) {
+        ymd = std::chrono::year_month_day(year.year,month.month,day.day);
+        auto tmp = std::chrono::system_clock::now();
+        std::cout << tmp << std::endl;
+    }
+    long Day() {
+        return ymd.day().operator unsigned int();
+    }
+    long Month() {
+        return ymd.month().operator unsigned int();
+    }
+    long Year() {
+        return ymd.year().operator int();
+    }
+    bool IsLeap() {
+        return ymd.year().is_leap();
+    }
+
+    explicit Date(std::chrono::year_month_day arg) : ymd(arg) {  }
+    friend std::ostream& operator << (std::ostream &out, Date &date);
 
 
-export enum class TimeType {
-    YEAR,MONTH,DAY
 };
+
+std::ostream &operator<<(std::ostream &out, Date &date) {
+    out << date.ymd;
+    return out;
+}
+
+export NAMESPACE_BEGIN(DateLiterals)
+Year operator "" _Y(const char *year) {
+    return Year(year);
+}
+
+Month operator "" _M(const char *month) {
+    return Month(month);
+}
+
+Day operator "" _D (const char *day) {
+    return Day(day);
+}
+NAMESPACE_END(DateLiterals)
+NAMESPACE_END(Date)
+
+NAMESPACE_BEGIN(Timer)
 export enum class CountType {
     nanoseconds,
     microseconds,
@@ -69,6 +116,8 @@ public:
     Timer() {
         time_point = std::chrono::system_clock::now();
     };
+    // 暂时删除从日期构建Timer
+/*
     explicit Timer(const Year&& year,const Month&& month,const Day&& day) {
         ymd = std::chrono::year_month_day(year.year,month.month,day.day);
         auto tmp = std::chrono::system_clock::now();
@@ -77,12 +126,13 @@ public:
         std::cout << time_point << std::endl;
         std::cout << std::chrono::duration_cast<std::chrono::hours>(tmp - time_point) << std::endl;
     }
-    explicit Timer(std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
     explicit Timer(std::chrono::year_month_day arg) : ymd(arg) {  }
-
     long CountTime(TimeType type = TimeType::DAY) {
         return std::chrono::sys_days(ymd).time_since_epoch().count();
     }
+*/
+    explicit Timer(std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
+
     Timer operator - (Timer& t) {
         return Timer(std::chrono::time_point<std::chrono::system_clock>(time_point - t.time_point));
     }
@@ -106,7 +156,7 @@ public:
     long Count(CountType type = CountType::milliseconds) {
         if (time_arr.size() > 2)
             return -1;
-        if (time_arr.size() == 0) {
+        if (time_arr.empty()) {
             switch (type) {
                 case CountType::nanoseconds:
                     return std::chrono::duration_cast<std::chrono::nanoseconds>(time_point.time_since_epoch()).count();
@@ -161,24 +211,11 @@ public:
 };
 
 std::ostream &operator << (std::ostream &out,const Timer& timer) {
-    out << timer.ymd;
+    out << timer.time_point;
     return out;
 }
 
 
-export NAMESPACE_BEGIN(TimerLiterals)
-Year operator "" _Y(const char *year) {
-    return Year(year);
-}
-
-Month operator "" _M(const char *month) {
-    return Month(month);
-}
-
-Day operator "" _D (const char *day) {
-    return Day(day);
-}
-NAMESPACE_END(TimerLiterals)
 NAMESPACE_END(Timer)
 
 
