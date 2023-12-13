@@ -6,13 +6,12 @@
 module;
 #include <iostream>
 #include <chrono>
-export module Timer;
+export module Time;
 
 #define NAMESPACE_BEGIN(name) namespace name {
 #define NAMESPACE_END(name) }
 
-
-NAMESPACE_BEGIN(Date)
+NAMESPACE_BEGIN(Time)
 export class Date;
 
 export class Year {
@@ -45,7 +44,9 @@ public:
 
 
 };
+export class Timer;
 export class Date {
+    friend class Timer;
     std::chrono::year_month_day ymd{};
 public:
     Date() {
@@ -69,6 +70,7 @@ public:
     bool IsLeap() {
         return ymd.year().is_leap();
     }
+
 
     explicit Date(std::chrono::year_month_day arg) : ymd(arg) {  }
     friend std::ostream& operator << (std::ostream &out, Date &date);
@@ -94,9 +96,7 @@ Day operator "" _D (const char *day) {
     return Day(day);
 }
 NAMESPACE_END(DateLiterals)
-NAMESPACE_END(Date)
 
-NAMESPACE_BEGIN(Timer)
 export enum class CountType {
     nanoseconds,
     microseconds,
@@ -116,21 +116,14 @@ public:
     Timer() {
         time_point = std::chrono::system_clock::now();
     };
-    // 暂时删除从日期构建Timer
-/*
-    explicit Timer(const Year&& year,const Month&& month,const Day&& day) {
-        ymd = std::chrono::year_month_day(year.year,month.month,day.day);
-        auto tmp = std::chrono::system_clock::now();
-        std::cout << tmp << std::endl;
-        time_point = std::chrono::time_point<std::chrono::system_clock>(std::chrono::sys_days(ymd));
-        std::cout << time_point << std::endl;
-        std::cout << std::chrono::duration_cast<std::chrono::hours>(tmp - time_point) << std::endl;
+    explicit Timer(Date arg) {
+        time_point = std::chrono::time_point<std::chrono::system_clock>(std::chrono::sys_days(arg.ymd));
     }
-    explicit Timer(std::chrono::year_month_day arg) : ymd(arg) {  }
-    long CountTime(TimeType type = TimeType::DAY) {
-        return std::chrono::sys_days(ymd).time_since_epoch().count();
+    Date ToDate() {
+        using namespace std::chrono;
+        return Date(std::chrono::year_month_day{floor<days>(system_clock::now())});
     }
-*/
+
     explicit Timer(std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
 
     Timer operator - (Timer& t) {
@@ -216,6 +209,8 @@ std::ostream &operator << (std::ostream &out,const Timer& timer) {
 }
 
 
-NAMESPACE_END(Timer)
+
+
+NAMESPACE_END(Time)
 
 
