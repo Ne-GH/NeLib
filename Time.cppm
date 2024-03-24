@@ -164,7 +164,7 @@ public:
 
 };
 
-class TimerNode {
+export class TimerNode {
     using CallBack = std::function<void()>;
     CallBack _func;
     time_t _end_time;
