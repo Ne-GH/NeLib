@@ -8,14 +8,22 @@ module;
 #include <algorithm>
 #include <iterator>
 #include <string>
+#include <codecvt>
 #include <fstream>
 #include <filesystem>
 #include <functional>
-#include <utility>
 export module FileBatching;
+
 
 #define NAMESPACE_BEGIN(name) namespace name {
 #define NAMESPACE_END(name) }
+
+#if defined(_WIN32) || defined(_WIN64)
+const char* const GbkLocalString = "zh_CN";
+#else
+const char* const GbkLocalString = "zh_CN.GBK";
+#endif
+
 
 bool DetectUtf8Coding(const std::string_view text) {
 
@@ -110,13 +118,9 @@ bool DetectGBKCoding(const std::string_view text) {
 class codecvt_gbk final : public std::codecvt_byname<wchar_t, char, std::mbstate_t>
 {
 public:
-    codecvt_gbk()
-#ifdef WINDOWS
-        :codecvt_byname("zh_CN")
-#else
-        : codecvt_byname("zh_CN.GBK")
-#endif
-    {  }
+    codecvt_gbk() : codecvt_byname(GbkLocalString) {
+
+    }
 };
 
 
@@ -127,30 +131,20 @@ static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
 export NAMESPACE_BEGIN(FileBatching)
 
-auto GetPathDeep(const std::filesystem::path& root_path, const std::filesystem::path& cur_path) {
-	auto path = cur_path.lexically_relative(root_path).generic_string();
-	return std::ranges::count(path.begin(), path.end(), '/') + 1;
+/*
+* @brief : 获取相对路径层数
+* @param root_path : 根路径
+* @param cur_path : 当前路径
+* @return : 当前路径相对于根路径的层数
+*/
+auto GetDeep(const std::filesystem::path& root_path, const std::filesystem::path& cur_path) {
+    auto path = cur_path.lexically_relative(root_path).generic_string();
+    return std::ranges::count(path.begin(), path.end(), '/') + 1;
 }
 
 enum class Encoding {
-	GBK,UTF8,ERROR
+    GBK,UTF8,ERROR
 };
-
-class ErrorEncoding {
-    std::string error_message;
-public:
-
-    ErrorEncoding() {
-        error_message = "this encoding is error";
-    }
-
-    explicit ErrorEncoding(std::string message) : error_message(std::move(message)) {  }
-
-    const char *what() const noexcept {
-        return error_message.c_str();
-    }
-};
-
 std::ostream & operator << (std::ostream &out, Encoding encoding) {
     switch (encoding) {
     case Encoding::GBK :
@@ -168,7 +162,11 @@ std::ostream & operator << (std::ostream &out, Encoding encoding) {
     return out;
 }
 
-
+/**
+* @brief : 检测文件的编码格式
+* @param file_path : 文件路径
+* @return : 文件编码格式，仅支持 UTF-8和GBK, 其他编码类型返回ERROR
+*/
 Encoding DetectEncoding(const std::filesystem::path& file_path) {
     std::ifstream file(file_path);
     std::string context((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -194,14 +192,23 @@ std::string UnicodeToUtf8(const std::wstring& str) {
     return gbk_convert.to_bytes(str);
 }
 
-
-
+// read_to_string
+// read_to_wstring
+std::wstring ReadToWString(const std::filesystem::path &file_path) {
+    std::wifstream in(file_path);
+    in.imbue(std::locale(GbkLocalString));
+    return {std::wstring(std::istreambuf_iterator<wchar_t>(in),std::istreambuf_iterator<wchar_t>())};
+}
+std::string ReadToString(const std::filesystem::path &file_path) {
+    std::ifstream in(file_path);
+    return {std::string(std::istreambuf_iterator<char>(in),std::istreambuf_iterator<char>())};
+}
 
 // save_string_to_file
 // save_wstring_to_file
 void SaveToFile(const std::wstring &str,const std::filesystem::path &file_path) {
     std::wofstream out_file(file_path);
-    out_file.imbue(std::locale("zh_CN.GBK"));
+    out_file.imbue(std::locale(GbkLocalString));
     out_file << str;
 }
 void SaveToFile(const std::string &str,const std::filesystem::path &file_path) {
@@ -238,41 +245,15 @@ std::wstring Utf8ToWstringGbk(const std::string &str) {
 std::string Utf8ToStringGbk(const std::string& str) {
     return gbk_convert.to_bytes(converter.from_bytes(str));
 }
-
-// read_to_string
-// read_to_wstring
-std::wstring ReadToWString(const std::filesystem::path &file_path) {
-    std::wifstream in(file_path);
-    in.imbue(std::locale("zh_CN.GBK"));
-    return {std::wstring(std::istreambuf_iterator<wchar_t>(in),std::istreambuf_iterator<wchar_t>())};
-}
-std::string ReadToString(const std::filesystem::path &file_path) {
-    std::ifstream in(file_path);
-    return {std::string(std::istreambuf_iterator<char>(in),std::istreambuf_iterator<char>())};
-}
-std::string ReadFile(const std::filesystem::path &file_path) {
-    if (!exists(file_path))
-        throw ErrorEncoding(std::filesystem::absolute(file_path).lexically_normal().string() + " is not exist");
-
-    switch (DetectEncoding(file_path)) {
-        case Encoding::GBK :
-            return GbkToUtf8(ReadToWString(file_path));
-        case Encoding::UTF8 :
-            return ReadToString(file_path);
-        case Encoding::ERROR :
-            throw ErrorEncoding(std::filesystem::absolute(file_path).lexically_normal().string()
-                + " encoding is not gbk or utf8");
-    }
-}
 class FileBatching {
-	std::string root_path_ = ".";
-	std::function<void(std::filesystem::path)> batchint_func_;
+    std::string root_path_ = ".";
+    std::function<void(std::filesystem::path)> batchint_func_;
 
     [[nodiscard]]
-	auto GetDeep(const std::filesystem::path& cur_path) const {
-		namespace fb = FileBatching;
-		return fb::GetPathDeep(root_path_, cur_path);
-	}
+    auto GetDeep(const std::filesystem::path& cur_path) const {
+        namespace fb = FileBatching;
+        return fb::GetDeep(root_path_, cur_path);
+    }
 
 public:
     bool no_batching_directory = false;
@@ -280,26 +261,26 @@ public:
     size_t limit_times = 0;
 
 
-	template <typename Func>
-	FileBatching(std::string &&root_path,Func func)
-			: root_path_(root_path) ,batchint_func_(func) {
+    template <typename Func>
+    FileBatching(std::string &&root_path,Func func)
+            : root_path_(root_path) ,batchint_func_(func) {
 
-	}
+    }
 
-	void operator() () const {
-		for (size_t times = 0 ;const auto& file : std::filesystem::recursive_directory_iterator(root_path_)) {
+    void operator() () const {
+        for (size_t times = 0 ;const auto& file : std::filesystem::recursive_directory_iterator(root_path_)) {
 
-			if (deep && GetDeep(file) > deep)
-				continue;
-		    if (no_batching_directory && std::filesystem::is_directory(file))
-		        continue;
+            if (deep && GetDeep(file) > deep)
+                continue;
+            if (no_batching_directory && std::filesystem::is_directory(file))
+                continue;
 
-			batchint_func_(file);
+            batchint_func_(file);
 
-		    if (limit_times && ++times >= limit_times)
-		        return;
-		}
-	}
+            if (limit_times && ++times >= limit_times)
+                return;
+        }
+    }
 
 };
 
