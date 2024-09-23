@@ -4,30 +4,94 @@
 *******************************************************************************/
 
 module;
-#include <functional>
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <fstream>
+#endif
 
+#include <functional>
 #include <mutex>
 #include <thread>
 #include <chrono>
 #include <iostream>
 export module Mouse;
 
+
+#ifdef _WIN32
+constexpr int LeftButton = VK_LBUTTON
+constexpr int RithtButton = VK_RBUTTON
+
+bool GetKeyState(int key) override {
+    return GetKeyState(key) & 0x8000;
+}
+void SetCursorPos(int x,int y) override {
+    SetCursorPos(x , y);
+}
+
+void LiftClick() {
+    mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+}
+
+void RightClick() {
+    mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+}
+
+
+std::tuple<int,int> GetCursorPos() override {
+    POINT p;
+    GetCursorPos(&p);
+    return {p.x,p.y};
+}
+
+
+#else
+constexpr int LeftButton = 1;
+constexpr int RightButton = 2;
+bool GetKeyState(int key) override {
+    // @TODO
+    return false;
+}
+
+void SetCursorPos(int x,int y) override {
+    // @TODO
+}
+
+void LiftClick() {
+    // @TODO
+}
+
+void RightClick() {
+    // @TODO
+}
+
+std::tuple<int,int> GetCursorPos() override {
+    std::ifstream in("/dev/input/mice", std::ifstream::in);
+    unsigned char data[3];
+    in.read(reinterpret_cast<char *>(data),3);
+    return {data[1],data[2]};
+}
+
+#endif
+
+
+
+
+
 class ClickEvent {
-    bool state;
+    bool state = false;
 public:
-    bool operator ()(short cur_key_state) {
-        bool clicked = cur_key_state & 0x8000;
-        bool ignore = clicked == state;
+    bool operator ()(const bool clicked) {
+        const bool ignore = clicked == state;
         state = clicked;
-        if (clicked && !ignore) 
+        if (clicked && !ignore)
             return true;
         return false;
     }
 };
 
 export class Mouse {
-    
+
 public:
     struct CursorPos {
         int x = 0;
@@ -49,12 +113,8 @@ private:
     std::function<void()> move_callback_;
 
     static CursorPos get_current_cursor_pos() {
-        // @TODO 获取当前鼠标坐标
-        POINT p;
-
-        GetCursorPos(&p);//获取鼠标坐标 
-
-        return { p.x,p.y };
+        const auto pos = GetCursorPos();
+        return { std::get<0>(pos),std::get<1>(pos) };
     }
 
     [[noreturn]]
@@ -64,17 +124,17 @@ private:
 
         while (true) {
             {
-                std::lock_guard<std::mutex> lock(thread_mutex_);
+                std::lock_guard lock(thread_mutex_);
                 if (!run_flag_) {
                     return;
                 }
-                    
+
             }
-            if (left_click_event(GetKeyState(VK_LBUTTON))) {
+            if (left_click_event(GetKeyState(LeftButton))) {
                 if (left_click_callback_)
                     left_click_callback_();
             }
-            if (right_click_event(GetKeyState(VK_RBUTTON))) {
+            if (right_click_event(GetKeyState(RightButton))) {
                 if (right_click_callback_)
                     right_click_callback_();
             }
@@ -103,25 +163,27 @@ public:
 
         }
         listen_click_thread_.detach();
-        
+
     }
     void move_to(const CursorPos pos) {
         cursor_pos = pos;
-        SetCursorPos(pos.x , pos.y);//更改鼠标坐标 
+        SetCursorPos(pos.x , pos.y);//更改鼠标坐标
     }
     void lift_click(const CursorPos pos) {
         cursor_pos = pos;
-        mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+        LiftClick();
     }
-    void lift_click() {
-        lift_click(cursor_pos);
+    void lift_click(int count = 1) {
+        while (count --)
+            lift_click(cursor_pos);
     }
     void right_click(const CursorPos pos) {
         cursor_pos = pos;
-        mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+        RightClick();
     }
-    void right_click() {
-        right_click(cursor_pos);
+    void right_click(int count = 1) {
+        while (count --)
+            right_click(cursor_pos);
     }
 
     void set_left_click_callback(std::function<void()> callback) {
