@@ -4,6 +4,7 @@
 *******************************************************************************/
 
 module;
+#include "tools.h"
 #include <iostream>
 #include <chrono>
 #include <set>
@@ -11,10 +12,7 @@ module;
 #include <functional>
 export module Time;
 
-#define NAMESPACE_BEGIN(name) namespace name {
-#define NAMESPACE_END(name) }
-
-NAMESPACE_BEGIN(Time)
+NAMESPACE_BEGIN(nl)
 export class Date;
 
 export class Year {
@@ -86,19 +84,20 @@ std::ostream& operator<<(std::ostream& out, Date& date) {
     return out;
 }
 
-export NAMESPACE_BEGIN(DateLiterals)
-Year operator "" _Y(const char* year) {
+export 
+NAMESPACE_BEGIN(nl::date_literals)
+Year operator "" _year(const char* year) {
     return Year(year);
 }
 
-Month operator "" _M(const char* month) {
+Month operator "" _month(const char* month) {
     return Month(month);
 }
 
-Day operator "" _D(const char* day) {
+Day operator "" _day(const char* day) {
     return Day(day);
 }
-NAMESPACE_END(DateLiterals)
+NAMESPACE_END(nl::date_literals)
 
 export enum class CountType {
     nanoseconds,
@@ -164,18 +163,19 @@ public:
 
 };
 
-export class TimerNode {
+class TimerNode {
     using CallBack = std::function<void()>;
-    CallBack _func;
-    time_t _end_time;
-    template <bool >
+    CallBack callback_func_;
+    time_t end_time_;
+
+    template <bool>
     friend class Timer;
 
 public:
-    TimerNode(CallBack func, size_t end_time) : _func(func), _end_time(end_time) {  }
+    TimerNode(CallBack func, size_t end_time) : callback_func_(func), end_time_(end_time) {  }
 
     bool operator < (const TimerNode& r) const {
-        if (_end_time < r._end_time)
+        if (end_time_ < r.end_time_)
             return true;
         return false;
     }
@@ -190,49 +190,49 @@ time_t GetNowTime() {
 export
 template <bool en_thread = false>
 class Timer {
-    std::multiset<TimerNode> _tasks;
-    std::jthread _thread;
+    std::multiset<TimerNode> tasks_;
+    std::jthread thread_;
 public:
     Timer() {
         if (en_thread == true) {
-            _thread = std::jthread(&Timer::Start, this);
+            thread_ = std::jthread(&Timer::start, this);
         }
 
     }
-    void Start() {
-        while (!IsEnd()) {
-            CheckTimer();
+    void start() {
+        while (!is_end()) {
+            check_timer();
         }
     }
-    void End() {
-        _thread.request_stop();
+    void end() {
+        thread_.request_stop();
     }
-    bool IsEnd() {
-        return _thread.get_stop_token().stop_requested();
+    bool is_end() {
+        return thread_.get_stop_token().stop_requested();
     }
-    TimerNode AddTask(std::function<void()> func, time_t time) {
+    TimerNode add_task(std::function<void()> func, time_t time) {
         TimerNode ret(func, GetNowTime() + time);
-        _tasks.insert(ret);
+        tasks_.insert(ret);
         return ret;
     }
-    TimerNode AddTask(time_t time, auto&& func, auto &&...args) {
+    TimerNode add_task(time_t time, auto&& func, auto &&...args) {
         auto fun = std::bind(std::forward<decltype(func)>(func), std::forward<decltype(args)>(args)...);
         return AddTask(fun, time);
     }
-    void DelTask(const TimerNode& del_timer_node) {
-        auto it = _tasks.find(del_timer_node);
-        if (it == _tasks.end())
+    void del_task(const TimerNode& del_timer_node) {
+        auto it = tasks_.find(del_timer_node);
+        if (it == tasks_.end())
             return;
-        _tasks.erase(it);
+        tasks_.erase(it);
     }
 
-    bool CheckTimer() {
-        auto it = _tasks.begin();
-        if (it == _tasks.end())
+    bool check_timer() {
+        auto it = tasks_.begin();
+        if (it == tasks_.end())
             return false;
-        if (it->_end_time < GetNowTime()) {
-            it->_func();
-            _tasks.erase(it);
+        if (it->end_time_ < GetNowTime()) {
+            it->callback_func_();
+            tasks_.erase(it);
             return true;
         }
     }
@@ -242,5 +242,5 @@ public:
 };
 
 
+NAMESPACE_END(nl)
 
-NAMESPACE_END(Time)

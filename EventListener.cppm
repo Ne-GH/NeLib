@@ -1,10 +1,24 @@
-module;
+﻿module;
+
+#ifdef _WIN32
 #include <windows.h>
 #include <iostream>
 #include <mutex>
 #include <thread>
+#elif __linux__
+#include <mutex>
+#include <thread>
+#include <map>
+#include <string>
+#include <condition_variable>
+
+#include <iostream>
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+#endif
 export module KeyEventListener;
 
+#ifdef _WIN32
 
 using std::cout, std::endl;
 LRESULT CALLBACK KeyCallBack(int nCode,WPARAM wParam,LPARAM lParam) {
@@ -264,22 +278,14 @@ public:
 
 
 
+#elif __linux
+
 // linux X API版本
 /*******************************************************************************
  * Author : yongheng
  * Data   : 2023/10/26 22:27
 *******************************************************************************/
-module;
-#include <mutex>
-#include <thread>
-#include <map>
-#include <string>
-#include <condition_variable>
 
-#include <iostream>
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
-export module EventListener;
 
 auto RegisterKey(Display *display,Window root) {
     std::map<std::string,int> keys;
@@ -419,3 +425,4 @@ public:
     }
 
 };
+#endif

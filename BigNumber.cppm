@@ -1,9 +1,10 @@
-/*******************************************************************************
+﻿/*******************************************************************************
  * Data   : 2023/10/20
  * Author : yongheng
 *******************************************************************************/
 
 module;
+#include "tools.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -19,14 +20,16 @@ std::is_same_v<T,char *> ||
 std::is_same_v<T,const char *>;
 
 
-export namespace BigNumber {
+NAMESPACE_BEGIN(nl)
 
-class BigInt {
+
+export
+class BigNumber {
     bool sign = true;
     std::string number = "";
 
     // 大于
-    bool AbsGt(const BigInt& big_int) const {
+    bool AbsGt(const BigNumber& big_int) const {
         if (number.size() > big_int.number.size()) {
             return true;
         }
@@ -42,7 +45,7 @@ class BigInt {
         }
     }
 
-    bool AbsGe(const BigInt& big_int) const {
+    bool AbsGe(const BigNumber& big_int) const {
         if (number.size() > big_int.number.size()) {
             return true;
         }
@@ -59,7 +62,7 @@ class BigInt {
     }
 
 
-    BigInt Add(const BigInt& big_int,bool sign = true) const {
+    BigNumber Add(const BigNumber& big_int,bool sign = true) const {
         std::string new_number(std::max(number.size(),big_int.number.size()),0);
         for (int i = 0;i < number.size(); ++i) {
             new_number[i] += number[i];
@@ -83,11 +86,11 @@ class BigInt {
             new_number[new_number.size()-1] = 1;
         }
 
-        return BigInt(new_number,sign,false,false);
+        return BigNumber(new_number,sign,false,false);
     }
 
     // 只能大减小
-    BigInt Sub(const BigInt& big_int,bool sign = true) const {
+    BigNumber Sub(const BigNumber& big_int,bool sign = true) const {
         std::string new_number = number;
         for (int i = 0;i < big_int.number.size(); ++i) {
             new_number[i] -= big_int.number[i];
@@ -103,10 +106,10 @@ class BigInt {
             new_number.resize(new_number.size()-1);
         }
 
-        return BigInt(new_number,sign, false, false);
+        return BigNumber(new_number,sign, false, false);
     }
 
-    BigInt Mul(const BigInt& big_int) const {
+    BigNumber Mul(const BigNumber& big_int) const {
         std::string new_number(number.size() + big_int.number.size(),'\0');
 
         int carry = 0;
@@ -124,13 +127,13 @@ class BigInt {
         }
 
 
-        return BigInt(new_number, true, false, false);
+        return BigNumber(new_number, true, false, false);
     }
 
-    std::tuple<BigInt,BigInt> Div(const BigInt& big_int) const {
-        if (big_int == BigInt(0)) {
+    std::tuple<BigNumber,BigNumber> Div(const BigNumber& big_int) const {
+        if (big_int == BigNumber(0)) {
             std::cerr << "被除数不为0" << std::endl;
-            return {BigInt("0"),BigInt("0")};
+            return {BigNumber("0"),BigNumber("0")};
         }
 
 
@@ -139,8 +142,8 @@ class BigInt {
 
         for (int i = number.size()-big_int.number.size();i >= 0; --i) {
 
-            while (BigInt(std::string(remainder.begin()+i,remainder.end()),true,false, false) >= big_int) {
-                auto p = BigInt(std::string(remainder.begin()+i,remainder.end()),true,false, false);
+            while (BigNumber(std::string(remainder.begin()+i,remainder.end()),true,false, false) >= big_int) {
+                auto p = BigNumber(std::string(remainder.begin()+i,remainder.end()),true,false, false);
                 for (auto &ch : p.number) {
                     ch += '0';
                 }
@@ -156,11 +159,11 @@ class BigInt {
                 quotient[i] ++;
             }
         }
-        return {BigInt(quotient,true,false, false),BigInt(remainder,true,false, false)};
+        return {BigNumber(quotient,true,false, false),BigNumber(remainder,true,false, false)};
     }
 
 public:
-    explicit BigInt(StringType auto str_num,bool sign = true,bool need_sub_0 = true,bool need_reverse = true) {
+    explicit BigNumber(StringType auto str_num,bool sign = true,bool need_sub_0 = true,bool need_reverse = true) {
 
 
         if (str_num[0] == '-') {
@@ -195,14 +198,14 @@ public:
         this->sign = sign;
     }
 
-    explicit BigInt(std::integral auto num) : BigInt(std::to_string(num)){  }
+    explicit BigNumber(std::integral auto num) : BigNumber(std::to_string(num)){  }
 
-    BigInt(const BigInt& big_int) {
+    BigNumber(const BigNumber& big_int) {
         number = big_int.number;
     }
-    BigInt& operator = (const BigInt& big_int) = default;
+    BigNumber& operator = (const BigNumber& big_int) = default;
 
-    friend std::ostream& operator << (std::ostream &out,const BigInt& big_int) {
+    friend std::ostream& operator << (std::ostream &out,const BigNumber& big_int) {
         if (big_int.sign == false)
             std::cout << '-';
 
@@ -212,7 +215,7 @@ public:
         return out;
     }
 
-    BigInt operator + (const BigInt &big_int) const {
+    BigNumber operator + (const BigNumber &big_int) const {
         if (sign == true && big_int.sign == true) {
             return Add(big_int);
         }
@@ -231,7 +234,7 @@ public:
         }
     }
 
-    BigInt operator - (const BigInt& big_int) {
+    BigNumber operator - (const BigNumber& big_int) {
 
         if (sign == true && big_int.sign == true) {
             // 大 - 小
@@ -247,22 +250,22 @@ public:
         }
     }
 
-    BigInt operator * (const BigInt& big_int) {
-        BigInt ans = Mul(big_int);
+    BigNumber operator * (const BigNumber& big_int) {
+        BigNumber ans = Mul(big_int);
         ans.sign = sign | big_int.sign;
         return std::move(ans);
     }
-    BigInt operator / (const BigInt& big_int) {
+    BigNumber operator / (const BigNumber& big_int) {
         auto [ans,_] = Div(big_int);
         ans.sign = sign | big_int.sign;
         return std::move(ans);
     }
-    BigInt operator % (const BigInt &big_int) {
+    BigNumber operator % (const BigNumber &big_int) {
         auto [_,ans] = Div(big_int);
         return ans;
     }
 
-    bool operator > (const BigInt& big_int) {
+    bool operator > (const BigNumber& big_int) {
         if (sign == true && big_int.sign == true) {
             return AbsGe(big_int);
         }
@@ -280,7 +283,7 @@ public:
             return !AbsGe(big_int);
         }
     }
-    bool operator >= (const BigInt& big_int) {
+    bool operator >= (const BigNumber& big_int) {
         if (sign == true && big_int.sign == true) {
             return AbsGe(big_int);
         }
@@ -298,7 +301,7 @@ public:
             return !AbsGt(big_int);
         }
     }
-    bool operator == (const BigInt& big_int) {
+    bool operator == (const BigNumber& big_int) {
         if (sign != big_int.sign)
             return false;
 
@@ -310,10 +313,10 @@ public:
 };
 
 
-namespace big_number_literals {
-    BigNumber::BigInt operator ""_big_number (const char *str,std::size_t len) {
-        return BigNumber::BigInt(str);
+NAMESPACE_BEGIN(nl::big_number_literals)
+    BigNumber operator ""_big_number (const char *str,std::size_t len) {
+        return BigNumber(str);
     }
-}// namespace BigNumber::big_number_literals
+NAMESPACE_END(nl::big_number_literals)
 
-}// namespace BigNumber
+NAMESPACE_END(nl)

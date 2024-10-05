@@ -1,9 +1,10 @@
-/*******************************************************************************
+﻿/*******************************************************************************
  * @Author : yongheng
  * @Data   : 2024/09/22 12:49
 *******************************************************************************/
 
 module;
+#include "tools.h"
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -19,26 +20,28 @@ export module Mouse;
 
 
 #ifdef _WIN32
-constexpr int LeftButton = VK_LBUTTON
-constexpr int RithtButton = VK_RBUTTON
+constexpr int LeftButton = VK_LBUTTON;
+constexpr int RightButton = VK_RBUTTON;
 
-bool GetKeyState(int key) override {
+NAMESPACE_BEGIN(mouse_module_static)
+
+bool GetKeyState(int key) {
     return GetKeyState(key) & 0x8000;
 }
-void SetCursorPos(int x,int y) override {
+void SetCursorPos(int x,int y) {
     SetCursorPos(x , y);
 }
 
-void LiftClick() {
+void LeftClick() {
     mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
 }
 
 void RightClick() {
     mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
 }
+NAMESPACE_END(mouse_module_static)
 
-
-std::tuple<int,int> GetCursorPos() override {
+std::tuple<int,int> GetCursorPos() {
     POINT p;
     GetCursorPos(&p);
     return {p.x,p.y};
@@ -171,7 +174,7 @@ public:
     }
     void lift_click(const CursorPos pos) {
         cursor_pos = pos;
-        LiftClick();
+        mouse_module_static::LeftClick();
     }
     void lift_click(int count = 1) {
         while (count --)
@@ -179,7 +182,7 @@ public:
     }
     void right_click(const CursorPos pos) {
         cursor_pos = pos;
-        RightClick();
+        mouse_module_static::RightClick();
     }
     void right_click(int count = 1) {
         while (count --)
