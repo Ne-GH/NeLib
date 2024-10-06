@@ -20,10 +20,10 @@ std::is_same_v<T,char *> ||
 std::is_same_v<T,const char *>;
 
 
+export
 NAMESPACE_BEGIN(nl)
 
 
-export
 class BigNumber {
     bool sign = true;
     std::string number = "";
@@ -163,7 +163,7 @@ class BigNumber {
     }
 
 public:
-    explicit BigNumber(StringType auto str_num,bool sign = true,bool need_sub_0 = true,bool need_reverse = true) {
+    BigNumber(StringType auto str_num,bool sign = true,bool need_sub_0 = true,bool need_reverse = true) {
 
 
         if (str_num[0] == '-') {
@@ -313,10 +313,11 @@ public:
 };
 
 
-NAMESPACE_BEGIN(nl::big_number_literals)
+export
+NAMESPACE_BEGIN(big_number_literals)
     BigNumber operator ""_big_number (const char *str,std::size_t len) {
         return BigNumber(str);
     }
-NAMESPACE_END(nl::big_number_literals)
+NAMESPACE_END(big_number_literals)
 
 NAMESPACE_END(nl)
