@@ -2,7 +2,6 @@
  * Author : yongheng
  * Data   : 2023/12/03
 *******************************************************************************/
-
 module;
 #include "tools.h"
 #include <iostream>
@@ -18,18 +17,19 @@ time_t GetNowTime() {
 }
 
 
+template<class T>
+concept CountType = std::is_same_v<T, std::chrono::nanoseconds>
+|| std::is_same_v<T, std::chrono::microseconds>
+|| std::is_same_v<T, std::chrono::milliseconds>
+|| std::is_same_v<T, std::chrono::seconds>
+|| std::is_same_v<T, std::chrono::minutes>
+|| std::is_same_v<T, std::chrono::hours>
+|| std::is_same_v<T, std::chrono::days>
+|| std::is_same_v<T, std::chrono::weeks>;
+
 export
 NAMESPACE_BEGIN(nl)
-enum class CountType {
-    nanoseconds,
-    microseconds,
-    milliseconds,
-    seconds,
-    minutes,
-    hours,
-    days,
-    weeks
-};
+
 
 class Time {
     std::chrono::time_point<std::chrono::system_clock> time_point{};
@@ -43,28 +43,10 @@ public:
     Time operator - (Time& t) {
         return Time(std::chrono::time_point<std::chrono::system_clock>(time_point - t.time_point));
     }
-    long count(CountType type = CountType::nanoseconds) {
-        using namespace std::chrono;
-        switch (type) {
-        case CountType::nanoseconds:
-            return duration_cast<nanoseconds>(time_point.time_since_epoch()).count();
-        case CountType::microseconds:
-            return duration_cast<microseconds>(time_point.time_since_epoch()).count();
-        case CountType::milliseconds:
-            return duration_cast<milliseconds> (time_point.time_since_epoch()).count();
-        case CountType::seconds:
-            return duration_cast<seconds> (time_point.time_since_epoch()).count();
-        case CountType::minutes:
-            return duration_cast<minutes> (time_point.time_since_epoch()).count();
-        case CountType::hours:
-            return duration_cast<hours> (time_point.time_since_epoch()).count();
-        case CountType::days:
-            return duration_cast<days> (time_point.time_since_epoch()).count();
-        case CountType::weeks:
-            return duration_cast<weeks> (time_point.time_since_epoch()).count();
-        default:
-            return -1;
-        }
+    
+    template<CountType T = std::chrono::milliseconds>
+    size_t count() {
+        return std::chrono::duration_cast<T>(time_point.time_since_epoch()).count();
     }
 
     Time& to_now() {
@@ -80,81 +62,62 @@ public:
 };
 
 
-/*
- * 该Timer为在时间到达之后调用callback_func
- * @TODO 定时调用 callback_func
- */
-template <bool en_thread = false>
 class Timer {
 
-    class TimerNode {
-        using CallBack = std::function<void()>;
-        CallBack callback_func_;
-        time_t end_time_;
-
-        template <bool>
-        friend class Timer;
-
-    public:
-        TimerNode(CallBack func, size_t end_time) : callback_func_(func), end_time_(end_time) {  }
-
-        bool operator < (const TimerNode& r) const {
-            if (end_time_ < r.end_time_)
+    using CallbackFunc = std::function<void()>;
+    
+    struct TimerTask {
+        CallbackFunc callback_func;
+        time_t end_time;
+        bool is_repeat_task = false;
+    
+    
+        bool operator < (const TimerTask& right) const {
+            if (end_time < right.end_time)
                 return true;
             return false;
-        }
-    };
+		}
+	};
 
-    std::multiset<TimerNode> tasks_;
+    void run() {
+        while (!is_finish()) {
+            
+            auto cur_time = GetNowTime();
+            for (auto it = tasks_.begin(); it != tasks_.end(); ) {
+                if (it->end_time < cur_time) {
+                    it->callback_func();
+                    it = tasks_.erase(it);
+                }
+                else
+                    ++ it;
+            }
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
+        }
+
+    }
+    
+	std::multiset<TimerTask> tasks_;
     std::jthread thread_;
+
 
 public:
     Timer() {
-        if (en_thread == true) {
-            thread_ = std::jthread(&Timer::start, this);
-        }
+        thread_ = std::jthread(&Timer::run, this);
+    }
 
+    bool is_finish() {
+        return thread_.get_stop_token().stop_requested();
     }
-    void start() {
-        while (!is_end()) {
-            check_timer();
-        }
+
+    void add_task(CallbackFunc func, time_t time, bool is_repeat_task = false) {
+        tasks_.insert(
+            { .callback_func = func, .end_time = GetNowTime() + time, .is_repeat_task = is_repeat_task}
+        );
     }
-    void end() {
-        thread_.request_stop();
-    }
-    bool is_end() {
-        if (en_thread)
-			return thread_.get_stop_token().stop_requested();
-        return tasks_.empty();
-    }
-    TimerNode add_task(std::function<void()> func, time_t time) {
-        TimerNode ret(func, GetNowTime() + time);
-        tasks_.insert(ret);
-        return ret;
-    }
-    TimerNode add_task(time_t time, auto&& func, auto &&...args) {
+    void add_task(time_t time, auto&& func, auto &&...args) {
         auto fun = std::bind(std::forward<decltype(func)>(func), std::forward<decltype(args)>(args)...);
         return AddTask(fun, time);
-    }
-    void del_task(const TimerNode& del_timer_node) {
-        auto it = tasks_.find(del_timer_node);
-        if (it == tasks_.end())
-            return;
-        tasks_.erase(it);
-    }
-
-    bool check_timer() {
-        if (tasks_.empty()) {
-            end();
-			return false;
-        }
-        if (auto it = tasks_.begin(); it->end_time_ < GetNowTime()) {
-            it->callback_func_();
-            tasks_.erase(it);
-            return true;
-        }
-
     }
 
 
