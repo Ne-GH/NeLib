@@ -10,6 +10,7 @@ module;
 #include <thread>
 #include <functional>
 #include <mutex>
+#include <utility>
 export module Time;
 
 time_t GetNowTime() {
@@ -37,11 +38,11 @@ class Time {
 public:
     Time() {
         time_point = std::chrono::system_clock::now();
-    };
+    }
 
-    explicit Time(std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
+    explicit Time(const std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
 
-    Time operator - (Time& t) {
+    Time operator - (const Time& t) const {
         return Time(std::chrono::time_point<std::chrono::system_clock>(time_point - t.time_point));
     }
     
@@ -80,30 +81,33 @@ class Timer {
 		}
 	};
 
+    void run_timer_task(std::set<TimerTask>::const_iterator &it) {
+        if (it->is_repeat_task == true) {
+            std::lock_guard lock(tasks_mutex_);
+            auto task = *it;
+            it = tasks_.erase(it);
+            task.callback_func();
+            task.end_time += task.interval_duration;
+            tasks_.insert(task);
+        }
+        else {
+            it->callback_func();
+            it = tasks_.erase(it);
+        }
+
+    }
+
     void run() {
         while (!is_finish()) {
-            
-            auto cur_time = GetNowTime();
-			std::lock_guard<std::mutex> lock(tasks_mutex_);
+            const auto cur_time = GetNowTime();
             for (auto it = tasks_.begin(); it != tasks_.end(); ) {
                 if (it->end_time < cur_time) {
-                    if (it->is_repeat_task == true) {
-						auto task = *it;
-						it = tasks_.erase(it);
-						task.callback_func();
-						task.end_time += task.interval_duration;
-						tasks_.insert(task);
-                    }
-                    else {
-						it->callback_func();
-						it = tasks_.erase(it);
-                        std::cout << "erase" << std::endl;
-                    }
+                    run_timer_task(it);
                 }
                 else
                     ++ it;
             }
-            
+
             std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
         }
 
@@ -114,18 +118,19 @@ class Timer {
 
 
 public:
-	std::set<TimerTask> tasks_;
+	std::multiset<TimerTask> tasks_;
     Timer() {
         thread_ = std::jthread(&Timer::run, this);
     }
 
-    bool is_finish() {
+    [[nodiscard]]
+    bool is_finish() const {
         return thread_.get_stop_token().stop_requested();
     }
 
-    void add_task(CallbackFunc func, time_t time, bool is_repeat_task = false) {
+    void add_task(CallbackFunc func, const time_t time, const bool is_repeat_task = false) {
         tasks_.insert(
-            { func , GetNowTime() + time, is_repeat_task, time}
+            { std::move(func) , GetNowTime() + time, is_repeat_task, time}
         );
     }
     void add_task(time_t time, auto&& func, auto &&...args) {
@@ -133,7 +138,7 @@ public:
         return AddTask(fun, time);
     }
     size_t task_count() {
-		std::lock_guard<std::mutex> lock(tasks_mutex_);
+		std::lock_guard lock(tasks_mutex_);
         return tasks_.size();
     }
 
