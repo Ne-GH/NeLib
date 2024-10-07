@@ -9,6 +9,7 @@ module;
 #include <set>
 #include <thread>
 #include <functional>
+#include <mutex>
 export module Time;
 
 time_t GetNowTime() {
@@ -70,7 +71,7 @@ class Timer {
         CallbackFunc callback_func;
         time_t end_time;
         bool is_repeat_task = false;
-    
+        time_t interval_duration;
     
         bool operator < (const TimerTask& right) const {
             if (end_time < right.end_time)
@@ -83,10 +84,21 @@ class Timer {
         while (!is_finish()) {
             
             auto cur_time = GetNowTime();
+			std::lock_guard<std::mutex> lock(tasks_mutex_);
             for (auto it = tasks_.begin(); it != tasks_.end(); ) {
                 if (it->end_time < cur_time) {
-                    it->callback_func();
-                    it = tasks_.erase(it);
+                    if (it->is_repeat_task == true) {
+						auto task = *it;
+						it = tasks_.erase(it);
+						task.callback_func();
+						task.end_time += task.interval_duration;
+						tasks_.insert(task);
+                    }
+                    else {
+						it->callback_func();
+						it = tasks_.erase(it);
+                        std::cout << "erase" << std::endl;
+                    }
                 }
                 else
                     ++ it;
@@ -97,11 +109,12 @@ class Timer {
 
     }
     
-	std::multiset<TimerTask> tasks_;
     std::jthread thread_;
+    std::mutex tasks_mutex_;
 
 
 public:
+	std::set<TimerTask> tasks_;
     Timer() {
         thread_ = std::jthread(&Timer::run, this);
     }
@@ -112,15 +125,17 @@ public:
 
     void add_task(CallbackFunc func, time_t time, bool is_repeat_task = false) {
         tasks_.insert(
-            { .callback_func = func, .end_time = GetNowTime() + time, .is_repeat_task = is_repeat_task}
+            { func , GetNowTime() + time, is_repeat_task, time}
         );
     }
     void add_task(time_t time, auto&& func, auto &&...args) {
         auto fun = std::bind(std::forward<decltype(func)>(func), std::forward<decltype(args)>(args)...);
         return AddTask(fun, time);
     }
-
-
+    size_t task_count() {
+		std::lock_guard<std::mutex> lock(tasks_mutex_);
+        return tasks_.size();
+    }
 
 };
 
