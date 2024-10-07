@@ -9,6 +9,7 @@ module;
 #include <thread>
 #include <functional>
 #include <algorithm>
+#include <ranges>
 #include <mutex>
 export module Time;
 
@@ -147,7 +148,7 @@ public:
     }
     size_t repeat_task_count() {
 		std::lock_guard lock(tasks_mutex_);
-        return std::count_if(tasks_.begin(),tasks_.end(), [](const TimerTask& task) {
+        return std::ranges::count_if(tasks_, [](const TimerTask& task) {
             return !task.is_repeat_task;
             });
     }
