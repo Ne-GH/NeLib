@@ -4,13 +4,12 @@
 *******************************************************************************/
 module;
 #include "tools.h"
-#include <iostream>
 #include <chrono>
 #include <set>
 #include <thread>
 #include <functional>
+#include <algorithm>
 #include <mutex>
-#include <utility>
 export module Time;
 
 time_t GetNowTime() {
@@ -83,7 +82,6 @@ class Timer {
 
     void run_timer_task(std::set<TimerTask>::const_iterator &it) {
         if (it->is_repeat_task == true) {
-            std::lock_guard lock(tasks_mutex_);
             auto task = *it;
             it = tasks_.erase(it);
             task.callback_func();
@@ -102,6 +100,7 @@ class Timer {
             const auto cur_time = GetNowTime();
             for (auto it = tasks_.begin(); it != tasks_.end(); ) {
                 if (it->end_time < cur_time) {
+                    std::lock_guard lock(tasks_mutex_);
                     run_timer_task(it);
                 }
                 else
@@ -115,10 +114,10 @@ class Timer {
     
     std::jthread thread_;
     std::mutex tasks_mutex_;
+	std::multiset<TimerTask> tasks_;
 
 
 public:
-	std::multiset<TimerTask> tasks_;
     Timer() {
         thread_ = std::jthread(&Timer::run, this);
     }
@@ -129,17 +128,28 @@ public:
     }
 
     void add_task(CallbackFunc func, const time_t time, const bool is_repeat_task = false) {
+		std::lock_guard lock(tasks_mutex_);
         tasks_.insert(
             { std::move(func) , GetNowTime() + time, is_repeat_task, time}
         );
+    }
+    void add_repeat_task(CallbackFunc func, const time_t time) {
+        add_task(std::move(func), std::move(time), true);
     }
     void add_task(time_t time, auto&& func, auto &&...args) {
         auto fun = std::bind(std::forward<decltype(func)>(func), std::forward<decltype(args)>(args)...);
         return AddTask(fun, time);
     }
+
     size_t task_count() {
 		std::lock_guard lock(tasks_mutex_);
         return tasks_.size();
+    }
+    size_t repeat_task_count() {
+		std::lock_guard lock(tasks_mutex_);
+        return std::count_if(tasks_.begin(),tasks_.end(), [](const TimerTask& task) {
+            return !task.is_repeat_task;
+            });
     }
 
 };
