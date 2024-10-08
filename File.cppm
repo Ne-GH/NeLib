@@ -12,8 +12,11 @@ module;
 #include <fstream>
 #include <filesystem>
 #include <functional>
+#include <any>
+#include <variant>
 #include "tools.h"
-export module FileBatching;
+#include <optional>
+export module File;
 
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -120,6 +123,7 @@ public:
 static std::wstring_convert<codecvt_gbk> gbk_convert;
 static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
+
 /**
  * @brief : 获取相对路径层数
  * @param root_path : 根路径
@@ -134,97 +138,129 @@ auto GetDeep(const std::filesystem::path& root_path, const std::filesystem::path
 export
 NAMESPACE_BEGIN(nl)
 
-enum class Encoding {
-    GBK,UTF8,ERROR
-};
-std::ostream & operator << (std::ostream &out, Encoding encoding) {
-    switch (encoding) {
-    case Encoding::GBK :
-        out << "GBK";
-        break;
-    case Encoding::UTF8 :
-        out << "UTF8";
-        break;
-    case Encoding::ERROR :
-        out << "Error";
-        break;
-    default :
-        break;
-    }
-    return out;
-}
-
-/**
- * @brief : 检测文件的编码格式
- * @param file_path : 文件路径
- * @return : 文件编码格式，仅支持 UTF-8和GBK, 其他编码类型返回ERROR
-**/
-Encoding DetectEncoding(const std::filesystem::path& file_path) {
-    std::ifstream file(file_path);
-    std::string context((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    if (DetectUtf8Coding(context) == true) {
-        return Encoding::UTF8;
-    }
-    if (DetectGBKCoding(context) == true) {
-        return Encoding::GBK;
-    }
-    return Encoding::ERROR;
-}
-
-std::wstring GbkToUnicode(const std::string& str) {
-    return gbk_convert.from_bytes(str);
-}
-std::string UnicodeToGbk(const std::wstring& str) {
-    return gbk_convert.to_bytes(str);
-}
-std::wstring Utf8ToUnicode(const std::string& str) {
-    return gbk_convert.from_bytes(str);
-}
-std::string UnicodeToUtf8(const std::wstring& str) {
-    return gbk_convert.to_bytes(str);
-}
-
-std::wstring ReadToWString(const std::filesystem::path &file_path) {
-    std::wifstream in(file_path);
-    in.imbue(std::locale(GbkLocalString));
-    return {std::wstring(std::istreambuf_iterator<wchar_t>(in),std::istreambuf_iterator<wchar_t>())};
-}
-std::string ReadToString(const std::filesystem::path &file_path) {
-    std::ifstream in(file_path);
-    return {std::string(std::istreambuf_iterator<char>(in),std::istreambuf_iterator<char>())};
-}
-
-void SaveToFile(const std::wstring &str,const std::filesystem::path &file_path) {
-    std::wofstream out_file(file_path);
-    out_file.imbue(std::locale(GbkLocalString));
-    out_file << str;
-}
-void SaveToFile(const std::string &str,const std::filesystem::path &file_path) {
-    std::ofstream out_file(file_path);
-    out_file << str;
-}
-
-
-std::string WStringToString(const std::wstring &str) {
-    return converter.to_bytes(str);
+/*******************************************************************************
+ * string <==> wstring
+*******************************************************************************/
+std::string WStringToString(const std::wstring_view wstring) {
+    return converter.to_bytes({wstring.data(), wstring.size()});
 }
 std::wstring StringToWString(const std::string &str) {
     return converter.from_bytes(str);
 }
 
-
-std::string GbkToUtf8(const std::wstring &str) {
+/*******************************************************************************
+ * gbk(wstring) <==> utf8
+ * gbk(string)  <==> utf8
+*******************************************************************************/
+std::string GBKToUTF8(const std::wstring &str) {
     return WStringToString(str);
 }
-std::string GbkToUtf8(const std::string& str) {
+std::string GBKToUTF8(const std::string& str) {
     return converter.to_bytes(gbk_convert.from_bytes(str));
 }
-
-std::wstring Utf8ToWstringGbk(const std::string &str) {
+std::wstring UTF8ToWstringGBK(const std::string &str) {
     return StringToWString(str);
 }
-std::string Utf8ToStringGbk(const std::string& str) {
+std::string UTF8ToStringGBK(const std::string& str) {
     return gbk_convert.to_bytes(converter.from_bytes(str));
+}
+
+class Encoding {
+    enum class EncodingType{
+        None, GBK, UTF8, ERROR
+    };
+    std::filesystem::path file_path_;
+    std::variant<std::string,std::wstring> content_;
+    EncodingType encoding_type_ = EncodingType::None;
+
+
+public:
+    using EncodingType = EncodingType;
+
+    explicit Encoding(const std::filesystem::path &file_path) : file_path_(std::move(file_path)) {
+        std::ifstream file(file_path_);
+        std::get<std::string>(content_) = std::string(std::istreambuf_iterator(file),std::istreambuf_iterator<char>());
+        encoding_type_ = detect_encoding(std::get<std::string>(content_));
+    }
+    explicit Encoding(const std::string_view string) {
+        std::get<std::string>(content_) = string;
+        encoding_type_ = detect_encoding(std::get<std::string>(content_));
+    }
+    explicit Encoding(const std::wstring_view wstring) {
+        std::get<std::wstring>(content_) = wstring;
+        encoding_type_ = detect_encoding(wstring_to_string(std::get<std::wstring>(content_)));
+    }
+
+    void save(const std::filesystem::path &path) const {
+        if (encoding_type_ == EncodingType::GBK) {
+            std::wofstream out_file(path);
+            out_file.imbue(std::locale(GbkLocalString));
+            out_file << std::get<std::wstring>(content_);
+        }
+        else if (encoding_type_ == EncodingType::UTF8) {
+            std::ofstream out_file(path);
+            out_file << std::get<std::string>(content_);
+        }
+    }
+
+
+    static EncodingType detect_encoding(const std::string_view content) {
+        if (DetectUtf8Coding(content) == true)
+            return EncodingType::UTF8;
+        if (DetectGBKCoding(content) == true)
+            return EncodingType::GBK;
+        return EncodingType::ERROR;
+    }
+    static std::string wstring_to_string(const std::wstring_view wstring) {
+        return converter.to_bytes({wstring.data(), wstring.size()});
+    }
+    static std::wstring string_to_wstring(const std::string &str) {
+        return converter.from_bytes(str);
+    }
+    std::string to_utf8() {
+        if (encoding_type_ == EncodingType::UTF8)
+            ;
+        if (encoding_type_ == EncodingType::GBK)
+            std::get<std::string>(content_) = GBKToUTF8(std::get<std::wstring>(content_));
+        encoding_type_ = EncodingType::UTF8;
+        return std::get<std::string>(content_);
+    }
+    std::wstring to_gbk() {
+        if (encoding_type_ == EncodingType::UTF8)
+            std::get<std::wstring>(content_) = UTF8ToWstringGBK(std::get<std::string>(content_));
+        if (encoding_type_ == EncodingType::GBK)
+            ;
+        encoding_type_ = EncodingType::GBK;
+        return std::get<std::wstring>(content_);
+    }
+
+    std::optional<std::variant<std::string,std::wstring>> operator()() {
+        if (encoding_type_ == EncodingType::UTF8)
+            return std::get<std::string>(content_);
+        if (encoding_type_ == EncodingType::GBK)
+            return std::get<std::wstring>(content_);
+        return std::nullopt;
+    }
+
+
+};
+
+
+std::ostream& operator << (std::ostream &out, const Encoding::EncodingType &encoding) {
+    switch (encoding) {
+    case Encoding::EncodingType::GBK :
+        out << "GBK";
+        break;
+    case Encoding::EncodingType::UTF8 :
+        out << "UTF8";
+        break;
+    case Encoding::EncodingType::ERROR :
+        out << "Error";
+        break;
+    default:
+        break;
+    }
+    return out;
 }
 
 class FileBatching {
@@ -233,7 +269,7 @@ class FileBatching {
 
     [[nodiscard]]
     auto get_deep(const std::filesystem::path& cur_path) const {
-        return ::GetDeep(root_path_, cur_path);
+        return GetDeep(root_path_, cur_path);
     }
 
 public:
