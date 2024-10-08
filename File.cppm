@@ -12,10 +12,9 @@ module;
 #include <fstream>
 #include <filesystem>
 #include <functional>
-#include <any>
 #include <variant>
-#include "tools.h"
 #include <optional>
+#include "tools.h"
 export module File;
 
 
@@ -203,6 +202,9 @@ public:
         }
     }
 
+    EncodingType encoding() const {
+        return encoding_type_;
+    }
 
     static EncodingType detect_encoding(const std::string_view content) {
         if (DetectUtf8Coding(content) == true)
@@ -273,7 +275,7 @@ class FileBatching {
     }
 
 public:
-    bool no_batching_directory = false;
+    bool only_batching_file = false;
     size_t deep = 0;
     size_t limit_times = 0;
 
@@ -290,7 +292,7 @@ public:
 
             if (deep && get_deep(file) > deep)
                 continue;
-            if (no_batching_directory && is_directory(file))
+            if (only_batching_file && is_directory(file))
                 continue;
 
             batching_func_(file);
