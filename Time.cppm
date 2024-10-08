@@ -18,7 +18,6 @@ time_t GetNowTime() {
     return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }
 
-
 template<class T>
 concept CountType = std::is_same_v<T, std::chrono::nanoseconds>
 || std::is_same_v<T, std::chrono::microseconds>
@@ -32,7 +31,6 @@ concept CountType = std::is_same_v<T, std::chrono::nanoseconds>
 export
 NAMESPACE_BEGIN(nl)
 
-
 class Time {
     std::chrono::time_point<std::chrono::system_clock> time_point{};
 public:
@@ -45,7 +43,7 @@ public:
     Time operator - (const Time& t) const {
         return Time(std::chrono::time_point<std::chrono::system_clock>(time_point - t.time_point));
     }
-    
+
     template<CountType T = std::chrono::milliseconds>
     size_t count() {
         return std::chrono::duration_cast<T>(time_point.time_since_epoch()).count();
@@ -67,21 +65,21 @@ public:
 class Timer {
 
     using CallbackFunc = std::function<void()>;
-    
+
     struct TimerTask {
         CallbackFunc callback_func;
         time_t end_time;
         bool is_repeat_task = false;
         time_t interval_duration;
-    
+
         bool operator < (const TimerTask& right) const {
             if (end_time < right.end_time)
                 return true;
             return false;
-		}
-	};
+        }
+    };
 
-    void run_timer_task(std::set<TimerTask>::const_iterator &it) {
+    void run_timer_task(std::set<TimerTask>::const_iterator& it) {
         if (it->is_repeat_task == true) {
             auto task = *it;
             it = tasks_.erase(it);
@@ -105,23 +103,19 @@ class Timer {
                     run_timer_task(it);
                 }
                 else
-                    ++ it;
+                    ++it;
             }
-
             std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
         }
 
     }
-    
+
     std::jthread thread_;
     std::mutex tasks_mutex_;
-	std::multiset<TimerTask> tasks_;
-
+    std::multiset<TimerTask> tasks_;
 
 public:
-    Timer() {
-        thread_ = std::jthread(&Timer::run, this);
-    }
+    Timer() : thread_(std::jthread(&Timer::run,this)) {  }
 
     [[nodiscard]]
     bool is_finish() const {
@@ -129,32 +123,28 @@ public:
     }
 
     void add_task(CallbackFunc func, const time_t time, const bool is_repeat_task = false) {
-		std::lock_guard lock(tasks_mutex_);
+        std::lock_guard lock(tasks_mutex_);
         tasks_.insert(
-            { std::move(func) , GetNowTime() + time, is_repeat_task, time}
+            { std::move(func) , GetNowTime() + time, is_repeat_task, time }
         );
     }
+
     void add_repeat_task(CallbackFunc func, const time_t time) {
         add_task(std::move(func), std::move(time), true);
     }
-    void add_task(time_t time, auto&& func, auto &&...args) {
-        auto fun = std::bind(std::forward<decltype(func)>(func), std::forward<decltype(args)>(args)...);
-        return AddTask(fun, time);
-    }
 
-    size_t task_count() {
-		std::lock_guard lock(tasks_mutex_);
+    [[nodiscard]]
+    size_t task_count(bool only_count_once_task = false) {
+        std::lock_guard lock(tasks_mutex_);
+        if (only_count_once_task) {
+            return std::ranges::count_if(tasks_, [](const TimerTask& task) {
+                return !task.is_repeat_task;
+                });
+        }
         return tasks_.size();
-    }
-    size_t repeat_task_count() {
-		std::lock_guard lock(tasks_mutex_);
-        return std::ranges::count_if(tasks_, [](const TimerTask& task) {
-            return !task.is_repeat_task;
-            });
     }
 
 };
 
 
 NAMESPACE_END(nl)
-
