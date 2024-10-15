@@ -202,6 +202,7 @@ public:
         }
     }
 
+    [[nodiscard]]
     EncodingType encoding() const {
         return encoding_type_;
     }
@@ -280,9 +281,23 @@ public:
     size_t limit_times = 0;
 
 
+    explicit FileBatching(const std::filesystem::path &root_path) : root_path_(root_path) {  }
+
     template <typename Func>
-    FileBatching(const std::string &&root_path,Func func)
+    FileBatching(const std::filesystem::path &root_path,Func func)
             : root_path_(root_path) ,batching_func_(func) {  }
+
+    template <typename Func>
+    void set_batching_function(Func func) {
+        batching_func_ = func;
+    }
+
+    [[nodiscard]]
+    size_t count() const {
+        return std::ranges::count_if(std::filesystem::recursive_directory_iterator(root_path_),[](const std::filesystem::path &path) {
+            return !is_directory(path);
+        });
+    }
 
     void operator() () const {
         if (!std::filesystem::exists(root_path_))
