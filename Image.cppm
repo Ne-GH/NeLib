@@ -11,11 +11,11 @@ export module Image;
 
 export NAMESPACE_BEGIN(nl)
 
-    class Image {
+class Image {
     cv::Mat image_;
 
 public:
-    Image();
+    Image() = default;
     explicit Image(const std::filesystem::path &&path);
     ~Image() = default;
 
@@ -47,12 +47,11 @@ public:
     }
 };
 
+
 NAMESPACE_END()
 
 
-nl::Image::Image() {
 
-}
 
 nl::Image::Image(const std::filesystem::path &&path) {
     image_ = cv::imread(path);
@@ -62,3 +61,62 @@ nl::Image::operator bool() const{
     return !image_.empty();
 }
 
+nl::Image& nl::Image::zoom(double multiple) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::set_image_width(int width) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::set_image_height(int height) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::resize(int width, int height) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::rotation(int angle) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::rotation(int x, int y, int angle) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::reverse_horizontally() {
+
+    return *this;
+}
+
+nl::Image& nl::Image::reverse_vertically() {
+
+    return *this;
+}
+
+nl::Image& nl::Image::to_grayscale() {
+
+    return *this;
+}
+
+nl::Image& nl::Image::to_binary(int) {
+
+    return *this;
+}
+
+nl::Image& nl::Image::to_pseudo_color() {
+
+    return *this;
+}
+
+std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
+
+    return {};
+}
