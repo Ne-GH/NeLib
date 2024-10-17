@@ -10,6 +10,7 @@ module;
 #include "tools.h"
 export module MultArray;
 
+export
 NAMESPACE_BEGIN(nl)
 
 
