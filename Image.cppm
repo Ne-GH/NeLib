@@ -42,8 +42,8 @@ public:
         return !image_.empty();
     }
 
-    void open(const std::filesystem::path &&path) { image_ = cv::imread(path); }
-    void save(const std::filesystem::path &&path) const { cv::imwrite(path, image_); }
+    void open(const std::filesystem::path &&path) { image_ = cv::imread(path.string()); }
+    void save(const std::filesystem::path &&path) const { cv::imwrite(path.string(), image_); }
 
     Image &zoom(double multiple);
     Image &set_image_width(int width);
@@ -57,7 +57,7 @@ public:
     Image &to_binary(int);
     Image &to_blur();
     Image &set_brightness(int);
-    Image &set_saturation(int);
+    Image &set_saturation(double);
     Image &to_pseudo_color();
     std::vector<std::array<size_t, 256>> get_histogram_data();
     cv::Mat get_histogram(int = 100,int = 100);
@@ -90,7 +90,7 @@ std::tuple<nl::MultArray<T>,int,int> GetImageData(const cv::Mat &image) {
 
 
 nl::Image::Image(const std::filesystem::path &&path) {
-    image_ = cv::imread(path);
+    image_ = cv::imread(path.string());
 }
 
 nl::Image& nl::Image::zoom(double multiple) {
@@ -378,4 +378,35 @@ cv::Mat nl::Image::get_histogram(int width ,int height) {
     }
 
     return ret;
+}
+
+nl::Image& nl::Image::to_blur() {
+    cv::GaussianBlur(image_, image_, cv::Size(101, 101), 11, 11);
+    return *this;
+}
+
+nl ::Image& nl::Image::set_brightness(int beta)
+{
+    for (int y = 0; y < image_.rows; y++) {
+        for (int x = 0; x < image_.cols; x++) {
+            for (int c = 0; c < image_.channels(); c++) {
+                image_.at<cv::Vec3b>(y, x)[c] =
+                    cv::saturate_cast<uchar>(image_.at<cv::Vec3b>(y, x)[c] + beta);
+            }
+        }
+    }
+    return *this;
+}
+
+nl::Image& nl::Image::set_saturation(double alpha)
+{
+    for (int y = 0; y < image_.rows; y++) {
+        for (int x = 0; x < image_.cols; x++) {
+            for (int c = 0; c < image_.channels(); c++) {
+                image_.at<cv::Vec3b>(y, x)[c] =
+                    cv::saturate_cast<uchar>(alpha * image_.at<cv::Vec3b>(y, x)[c]);
+            }
+        }
+    }
+    return *this;
 }

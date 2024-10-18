@@ -65,9 +65,15 @@ class Camera {
     };
 
 public:
-    Camera() : camera_(cv::VideoCapture(0,cv::CAP_V4L2)) {
+    Camera() {
+#ifdef _WIN32
+        camera_ = cv::VideoCapture(0);
+#elif __linux__
+        camera_ = cv::VideoCapture(0, cv::CAP_V4L2);
+#endif
+
         if (!camera_.isOpened()) {
-            throw std::runtime_error("Could not open camera");
+            throw std::runtime_error("can't open camera");
         }
     }
 
@@ -95,6 +101,7 @@ public:
         // 60  fps : wait 16
         // 30  fps : wait 33
         // 15  fps : wait 66
+
         cv::waitKey(8);
     }
     void show(const std::string &&window_name) {
