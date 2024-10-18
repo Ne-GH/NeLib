@@ -40,8 +40,7 @@ class Camera {
         bool operator != (const iterator& other) const {
             return true;
         }
-        cv::Mat operator*() {
-
+        cv::Mat& operator*() {
             return image_;
         }
 
@@ -57,7 +56,7 @@ class Camera {
         bool operator != (const flip_iterator& other) const {
             return it_ != other.it_;
         }
-        cv::Mat operator*() {
+        cv::Mat& operator*() {
             cv::flip(*it_,*it_,1);
             return *it_;
         }
@@ -97,6 +96,12 @@ public:
         // 30  fps : wait 33
         // 15  fps : wait 66
         cv::waitKey(8);
+    }
+    void show(const std::string &&window_name) {
+        for (auto it = begin(); it != end(); ++it) {
+            cv::imshow(window_name, *it);
+            for_each_wait();
+        }
     }
 
 };

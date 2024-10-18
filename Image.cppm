@@ -11,6 +11,7 @@ export module Image;
 import MultArray;
 
 export NAMESPACE_BEGIN(nl)
+#define USE_OPENCV_LIB true
 
 class Image {
     cv::Mat image_;
@@ -54,9 +55,13 @@ public:
     Image &reverse_vertically();
     Image &to_grayscale();
     Image &to_binary(int);
+    Image &to_blur();
+    Image &set_brightness(int);
+    Image &set_saturation(int);
     Image &to_pseudo_color();
     std::vector<std::array<size_t, 256>> get_histogram_data();
     cv::Mat get_histogram(int = 100,int = 100);
+
 
     void show_test() const {
         cv::imshow("show_test", image_);
@@ -89,41 +94,156 @@ nl::Image::Image(const std::filesystem::path &&path) {
 }
 
 nl::Image& nl::Image::zoom(double multiple) {
+    if (image_.empty() || multiple == 1)
+        return *this;
+
+    auto func = [&]<typename T>() {
+        int new_width = image_.cols * multiple, new_height = image_.rows * multiple;
+        auto new_image = cv::Mat(new_height, new_width, image_.type());
+        auto [src_data, src_row, src_col] = GetImageData<T>(image_);
+        auto [new_data, ignore1, ignore2] = GetImageData<T>(new_image);
+
+        for (int i = 0; i < new_height; ++i)
+            for (int j = 0; j < new_width; ++j)
+                new_data({ i,j }) = src_data({ static_cast<int>(i / multiple),static_cast<int>(j / multiple) });
+
+        image_ = new_image;
+    };
+
+    // @TODO 二者操作都应该在image_back_ 原图像上完成
+    // 填充像素
+    if (image_.elemSize() == 1)
+        func.operator()<uchar>();
+    else if (image_.elemSize() == 3)
+        func.operator()<BGRPixel>();
 
     return *this;
 }
 
 nl::Image& nl::Image::set_image_width(int width) {
+    if (image_.empty())
+        return *this;
+    double multiple = width * 1.0 / image_.cols;
 
+    auto func = [&]<typename T>() {
+        int row = image_.rows, col = image_.cols * multiple;
+        auto new_image = cv::Mat(row, col, image_.type());
+        auto [src_data, _1, _2] = GetImageData<T>(image_);
+        auto [new_data, _3, _4] = GetImageData<T>(new_image);
+
+        for (int i = 0; i < row; ++i)
+            for (int j = 0; j < col; ++j)
+                new_data({ i,j }) = src_data({ i,static_cast<int>(j / multiple) });
+
+        image_ = new_image;
+    };
+
+    if (image_.elemSize() == 1)
+        func.operator() < uchar > ();
+    else if (image_.elemSize() == 3)
+        func.operator() < BGRPixel > ();
     return *this;
 }
 
 nl::Image& nl::Image::set_image_height(int height) {
+    if (image_.empty())
+        return *this;
+    double multiple = height * 1.0 / image_.rows;
 
+    auto func = [&]<typename T>() {
+        int row = image_.rows * multiple, col = image_.cols;
+        auto new_image = cv::Mat(row, col, image_.type());
+        auto [src_data, src_row, src_col] = GetImageData<T>(image_);
+        auto [new_data, ignore1, ignore2] = GetImageData<T>(new_image);
+
+        for (int i = 0; i < row; ++i)
+            for (int j = 0; j < col; ++j)
+                new_data({ i,j }) = src_data({ static_cast<int>(i / multiple), j });
+
+        image_ = new_image;
+    };
+    if (image_.elemSize() == 1)
+        func.operator() < uchar > ();
+    else if (image_.elemSize() == 3)
+        func.operator() < BGRPixel > ();
     return *this;
 }
 
 nl::Image& nl::Image::resize(int width, int height) {
-
+    set_image_width(width);
+    set_image_height(height);
     return *this;
 }
 
 nl::Image& nl::Image::rotation(int angle) {
-
+#if USE_OPENCV_LIB
+    cv::Point2f center(image_.cols / 2.0, image_.rows / 2.0);
+    cv::Mat matrix = cv::getRotationMatrix2D(center, angle, 1.0);
+    cv::Mat image;
+    cv::warpAffine(image_, image, matrix, image_.size());
+    image_ = image;
+#else
+    rotation(image_.rows / 2, image_.cols / 2, angle);
+#endif
     return *this;
 }
 
 nl::Image& nl::Image::rotation(int x, int y, int angle) {
-
+    auto rotation = [&] <typename T>{
+        auto [src_data, row, col] = GetImageData<T>(image_);
+        double angle_rad = angle * CV_PI / 180;
+        cv::Mat image(row, col, image_.type());
+        auto [dest_data, _1, _2] = GetImageData<T>(image);
+        /*
+            dest.x = (src.x - x) * cos(angle) - (src.y - y) * sin(angle) + x
+            dest.y = (src.x - x) * sin(angle) + (src.y - y) * cos(angle) + y
+            dest.x - x      =       dx * cos(angle) - dy * sin(angle)
+            dest.y - y      =       dy * sin(angle) + dy *
+        */
+        for (int i = 0; i < image.rows; ++i) {
+            for (int j = 0; j < image.cols; ++j) {
+                int dx = i - x;
+                int dy = j - y;
+                int dest_x = static_cast<int>(dx * cos(angle_rad) - dy * sin(angle_rad) + x);
+                int dest_y = static_cast<int>(dx * sin(angle_rad) + dy * cos(angle_rad) + y);
+                if (dest_x >= 0 && dest_x < row && dest_y >= 0 && dest_y < col) {
+                    dest_data({ i, j }) = src_data({ dest_x, dest_y });
+                }
+            }
+        }
+        image_ = image;
+    };
+    if (image_.elemSize() == 1)
+        rotation.operator() <uchar> ();
+    else if (image_.elemSize() == 3)
+        rotation.operator() <BGRPixel> ();
     return *this;
 }
 
 nl::Image& nl::Image::reverse_horizontally() {
+    auto [data, row, col] = GetImageData<BGRPixel>(image_);
 
+    for (int i = 0; i < row; ++i)
+        for (int j = 0; j < col / 2; ++j)
+            std::swap(data({ i,j }) , data({ i,col - j - 1 }));
     return *this;
 }
 
 nl::Image& nl::Image::reverse_vertically() {
+    int row = image_.rows, col = image_.cols;
+    uchar* data = image_.data;
+    auto buf = new uchar[col * 3];
+
+#define LINE(num) ((num) * col * 3)
+
+    for (int i = 0; i < row / 2; ++i) {
+        memcpy(buf,                         &data[LINE(i)],             col * 3);
+        memcpy(&data[LINE(i)],              &data[LINE(row - i - 1)],   col * 3);
+        memcpy(&data[LINE(row - i - 1)],    buf,                        col * 3);
+    }
+
+#undef LINE
+    delete[] buf;
 
     return *this;
 }
