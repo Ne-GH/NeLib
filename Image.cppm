@@ -63,8 +63,11 @@ public:
     cv::Mat get_histogram(int = 100,int = 100);
 
 
-    void show_test() const {
+    void show(const std::string & window_name = "image_show") const {
         cv::imshow("show_test", image_);
+    }
+    void show_and_wait(const std::string & window_name) const {
+        show(window_name);
         cv::waitKey();
     }
 };
