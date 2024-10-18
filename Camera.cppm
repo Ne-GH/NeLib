@@ -110,6 +110,12 @@ public:
             for_each_wait();
         }
     }
+    void flip_show(const std::string &&window_name) {
+        for (auto it = flip_begin(); it != flip_end(); ++it) {
+            cv::imshow(window_name, *it);
+            for_each_wait();
+        }
+    }
 
 };
 
