@@ -33,6 +33,14 @@ public:
     explicit Image(const std::filesystem::path &&path);
     explicit Image(const cv::Mat &image) : image_(image) {  };
 
+    Image(const Image &image) {
+        image_ = image.image_.clone();
+        image.image_.copyTo(image_);
+    }
+    Image &operator=(const Image &image) {
+        new (this) Image(image);
+        return *this;
+    }
 
     [[nodiscard]]
     explicit operator bool() const {
