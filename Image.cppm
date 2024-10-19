@@ -7,10 +7,11 @@ module;
 #include "tools.h"
 #include <opencv2/opencv.hpp>
 #include <filesystem>
-export module Image;
 import MultArray;
+export module Image;
 
 export NAMESPACE_BEGIN(nl)
+
 #define USE_OPENCV_LIB true
 
 class Image {

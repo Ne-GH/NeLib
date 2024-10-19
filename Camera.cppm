@@ -116,6 +116,9 @@ public:
             for_each_wait();
         }
     }
+    cv::Mat get_frame() {
+        return *iterator(this);
+    }
 
 };
 
