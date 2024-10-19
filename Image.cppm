@@ -82,6 +82,7 @@ constexpr size_t nl::Image::get_elem_size() {
         return 3;
     else if (std::is_same_v<T,uchar>)
         return 1;
+    return 0;
 }
 
 
@@ -101,7 +102,8 @@ nl::Image& nl::Image::zoom(double multiple) {
         return *this;
 
     auto func = [&]<typename T>() {
-        int new_width = image_.cols * multiple, new_height = image_.rows * multiple;
+        const int new_width = static_cast<int>(image_.cols * multiple);
+        const int new_height = static_cast<int>(image_.rows * multiple);
         auto new_image = cv::Mat(new_height, new_width, image_.type());
         auto [src_data, src_row, src_col] = GetImageData<T>(image_);
         auto [new_data, ignore1, ignore2] = GetImageData<T>(new_image);
@@ -252,7 +254,9 @@ nl::Image& nl::Image::reverse_vertically() {
 }
 
 nl::Image& nl::Image::to_grayscale() {
-
+#ifdef USE_OPENCV_LIB
+    cv::cvtColor(image_, image_, cv::COLOR_BGR2GRAY);
+#else
     auto [data, row, col] = GetImageData<BGRPixel>(image_);
 
     auto image = cv::Mat(row, col, CV_8UC1);
@@ -267,6 +271,7 @@ nl::Image& nl::Image::to_grayscale() {
     }
 
     image_ = image;
+#endif
     return *this;
 }
 
@@ -324,6 +329,7 @@ std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
         }
         return count;
     }
+    return {};
 }
 
 cv::Mat nl::Image::get_histogram(int width ,int height) {
@@ -384,32 +390,16 @@ cv::Mat nl::Image::get_histogram(int width ,int height) {
 }
 
 nl::Image& nl::Image::to_blur() {
-    cv::GaussianBlur(image_, image_, cv::Size(101, 101), 11, 11);
+    cv::GaussianBlur(image_, image_, cv::Size(3, 3), 11, 11);
     return *this;
 }
 
-nl ::Image& nl::Image::set_brightness(int beta)
-{
-    for (int y = 0; y < image_.rows; y++) {
-        for (int x = 0; x < image_.cols; x++) {
-            for (int c = 0; c < image_.channels(); c++) {
-                image_.at<cv::Vec3b>(y, x)[c] =
-                    cv::saturate_cast<uchar>(image_.at<cv::Vec3b>(y, x)[c] + beta);
-            }
-        }
-    }
+nl ::Image& nl::Image::set_brightness(const int beta) {
+    cv::add(image_, cv::Scalar(beta,beta,beta), image_);
     return *this;
 }
 
-nl::Image& nl::Image::set_saturation(double alpha)
-{
-    for (int y = 0; y < image_.rows; y++) {
-        for (int x = 0; x < image_.cols; x++) {
-            for (int c = 0; c < image_.channels(); c++) {
-                image_.at<cv::Vec3b>(y, x)[c] =
-                    cv::saturate_cast<uchar>(alpha * image_.at<cv::Vec3b>(y, x)[c]);
-            }
-        }
-    }
+nl::Image& nl::Image::set_saturation(const double alpha) {
+    cv::multiply(image_, alpha, image_);
     return *this;
 }
