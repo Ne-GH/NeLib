@@ -96,7 +96,7 @@ public:
     }
 
 
-    void for_each_wait() const {
+    static void for_each_wait() {
         // 120 fps : wait 8
         // 60  fps : wait 16
         // 30  fps : wait 33

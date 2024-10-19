@@ -31,11 +31,7 @@ public:
     Image() = default;
     explicit Image(const std::filesystem::path &&path);
     explicit Image(const cv::Mat &image) : image_(image) {  };
-    ~Image() = default;
 
-    // @TODO 暂不支持拷贝操作
-    Image(const Image &) = delete;
-    Image &operator=(const Image &) = delete;
 
     [[nodiscard]]
     explicit operator bool() const {
@@ -64,7 +60,7 @@ public:
 
 
     void show(const std::string & window_name = "image_show") const {
-        cv::imshow("show_test", image_);
+        cv::imshow(window_name, image_);
     }
     void show_and_wait(const std::string & window_name) const {
         show(window_name);
