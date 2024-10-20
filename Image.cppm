@@ -33,12 +33,14 @@ public:
     explicit Image(const std::filesystem::path &&path);
     explicit Image(const cv::Mat &image) : image_(image) {  };
 
+    // 拷贝构造函数是深拷贝
     Image(const Image &image) {
         image_ = image.image_.clone();
         image.image_.copyTo(image_);
     }
-    Image &operator=(const Image &image) {
-        new (this) Image(image);
+    // 赋值运算符是浅拷贝
+    Image &operator = (const Image &image) {
+        image_ = image.image_;
         return *this;
     }
 
@@ -49,6 +51,8 @@ public:
 
     void open(const std::filesystem::path &&path) { image_ = cv::imread(path.string()); }
     void save(const std::filesystem::path &&path) const { cv::imwrite(path.string(), image_); }
+
+    cv::Mat get_mat() { return image_; }
 
     Image &zoom(double multiple);
     Image &set_image_width(int width);

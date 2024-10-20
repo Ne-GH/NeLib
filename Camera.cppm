@@ -89,10 +89,16 @@ public:
     flip_iterator flip_end() {
         return flip_iterator(nullptr);
     }
-    size_t get_fps() const {
+    size_t fps() const {
         auto cur_frame = camera_.get(cv::CAP_PROP_POS_FRAMES);
         auto cur_time = camera_.get(cv::CAP_PROP_POS_MSEC);
         return cur_frame / (cur_time / 1000);
+    }
+    size_t width() {
+        return static_cast<int>(camera_.get(cv::CAP_PROP_FRAME_WIDTH));
+    }
+    size_t height() {
+        return static_cast<int>(camera_.get(cv::CAP_PROP_FRAME_HEIGHT));
     }
 
 
