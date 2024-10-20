@@ -4,6 +4,7 @@
 *******************************************************************************/
 
 module;
+import Image;
 
 #include <opencv2/opencv.hpp>
 
@@ -18,7 +19,8 @@ class Camera {
     cv::VideoCapture camera_;
 
     class iterator {
-        cv::Mat image_;
+        cv::Mat image_mat_;
+        Image image_;
         Camera *parent_;
     public:
         explicit iterator(Camera* parent = nullptr) : parent_(parent) {
@@ -26,21 +28,22 @@ class Camera {
                 return;
 
             do {
-                parent_->camera_ >> image_;
-            } while (image_.empty());
+                parent_->camera_ >> image_mat_;
+            } while (image_mat_.empty());
         }
 
         iterator& operator++() {
             do {
-                parent_->camera_ >> image_;
-            } while (image_.empty());
+                parent_->camera_ >> image_mat_;
+            } while (image_mat_.empty());
 
             return *this;
         }
         bool operator != (const iterator& other) const {
             return true;
         }
-        cv::Mat& operator*() {
+        Image& operator*() {
+            image_ = image_mat_;
             return image_;
         }
 
@@ -56,12 +59,10 @@ class Camera {
         bool operator != (const flip_iterator& other) const {
             return it_ != other.it_;
         }
-        cv::Mat& operator*() {
-            cv::flip(*it_,*it_,1);
+        Image& operator*() {
+            cv::flip((*it_).get_mat(), (*it_).get_mat(), 1);
             return *it_;
         }
-
-
     };
 
 public:
@@ -112,17 +113,17 @@ public:
     }
     void show(const std::string &&window_name) {
         for (auto it = begin(); it != end(); ++it) {
-            cv::imshow(window_name, *it);
+            cv::imshow(window_name, (*it).get_mat());
             for_each_wait();
         }
     }
     void flip_show(const std::string &&window_name) {
         for (auto it = flip_begin(); it != flip_end(); ++it) {
-            cv::imshow(window_name, *it);
+            cv::imshow(window_name, (*it).get_mat());
             for_each_wait();
         }
     }
-    cv::Mat get_frame() {
+    Image& get_frame() {
         return *iterator(this);
     }
 

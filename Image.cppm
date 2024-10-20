@@ -31,16 +31,16 @@ class Image {
 public:
     Image() = default;
     explicit Image(const std::filesystem::path &&path);
-    explicit Image(const cv::Mat &image) : image_(image) {  };
 
-    // 拷贝构造函数是深拷贝
-    Image(const Image &image) {
-        image_ = image.image_.clone();
-        image.image_.copyTo(image_);
+    Image(const cv::Mat &image) : image_(image) {  };
+    Image& operator = (const cv::Mat image) {
+        image_ = image;
+        return *this;
     }
-    // 赋值运算符是浅拷贝
-    Image &operator = (const Image &image) {
-        image_ = image.image_;
+
+    Image& clone_from(const Image& other) {
+        image_ = other.image_.clone();
+        other.image_.copyTo(image_);
         return *this;
     }
 
