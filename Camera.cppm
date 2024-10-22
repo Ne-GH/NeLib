@@ -4,12 +4,12 @@
 *******************************************************************************/
 
 module;
-import Image;
+
+
 
 #include <opencv2/opencv.hpp>
-
 #include "tools.h"
-
+import Image;
 export module Camera;
 
 export
@@ -19,31 +19,31 @@ class Camera {
     cv::VideoCapture camera_;
 
     class iterator {
-        cv::Mat image_mat_;
         Image image_;
         Camera *parent_;
     public:
         explicit iterator(Camera* parent = nullptr) : parent_(parent) {
             if (!parent_)
                 return;
-
+            cv::Mat image;
             do {
-                parent_->camera_ >> image_mat_;
-            } while (image_mat_.empty());
+                parent_->camera_ >> image;
+            } while (image.empty());
+            image_ = image;
         }
 
         iterator& operator++() {
+            cv::Mat image;
             do {
-                parent_->camera_ >> image_mat_;
-            } while (image_mat_.empty());
-
+                parent_->camera_ >> image;
+            } while (image.empty());
+            image_ = image;
             return *this;
         }
         bool operator != (const iterator& other) const {
             return true;
         }
         Image& operator*() {
-            image_ = image_mat_;
             return image_;
         }
 
