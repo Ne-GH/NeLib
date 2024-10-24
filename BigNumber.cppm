@@ -313,7 +313,6 @@ public:
 };
 
 
-export
 NAMESPACE_BEGIN(big_number_literals)
     BigNumber operator ""_big_number (const char *str,std::size_t len) {
         return {str};

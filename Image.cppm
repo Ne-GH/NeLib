@@ -18,9 +18,6 @@ export NAMESPACE_BEGIN(nl)
 class Image {
     cv::Mat image_;
 
-    template<typename T>
-    constexpr size_t get_elem_size() const;
-
     struct BGRPixel {
         uchar B, G, R;
     };
@@ -94,16 +91,6 @@ public:
 
 
 NAMESPACE_END()
-
-
-template<typename T>
-constexpr size_t nl::Image::get_elem_size() const {
-    if constexpr (std::is_same_v<T,BGRPixel>) 
-        return 3;
-    else if (std::is_same_v<T,uchar>)
-        return 1;
-    return 0;
-}
 
 
 template<typename T>
