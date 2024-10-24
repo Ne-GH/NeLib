@@ -16,7 +16,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #endif
-#include "tools.h":
+#include "tools.h"
 export module KeyEventListener;
 
 NAMESPACE_BEGIN(nl)
