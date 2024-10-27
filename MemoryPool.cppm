@@ -4,18 +4,16 @@
 *******************************************************************************/
 
 module;
+#include <algorithm>
+#include <functional>
 #include <memory>
-#include <vector>
+#include <ranges>
 #include <set>
+#include <vector>
 #include "tools.h"
 export module MemoryPool;
 
-
-/*******************************************************************************
- * 1、需要分配一大块内存用于存储T类型对象
- * 2、分配一个对象之后需要返回指向该对象的指针，使得能够索引到该对象，至于析构后该对象不存在，暂不考虑
- * 3、释放指定对象
-*******************************************************************************/
+export
 NAMESPACE_BEGIN(nl)
 template <typename T>
 class MemoryPool {
@@ -25,6 +23,9 @@ class MemoryPool {
 
         bool operator < (const MemoryNode &other) const {
             return count < other.count;
+        }
+        bool operator==(const MemoryNode &other) const {
+            return addr == other.addr;
         }
     };
 
@@ -38,37 +39,83 @@ class MemoryPool {
         auto find = set_.lower_bound({nullptr,count});
         return find != set_.end() ? find->addr : nullptr;
     }
-    void update_memory_pool(T *addr, size_t count, bool is_malloc) {
-        while (count--)
-            flag_[addr - addr_] = is_malloc;
+    void merge(T *addr,size_t count) {
+        auto cur_index = addr - addr_;
+        auto back_index = cur_index + count;
+        auto front_one_index = cur_index - 1;
 
-        size_t index = addr - addr_;
-        size_t rindex = flag_.size() - index;
+        bool back_need_marge = back_index < flag_.size() && !flag_[back_index];
+        bool front_need_marge = front_one_index >= 0 && !flag_[front_one_index];
 
-        auto pro = std::ranges::find(flag_.rbegin() + rindex, flag_.rend(), true);
 
-        // 满足条件说明已经是末尾位置了,仅对前面的合并
-        index += count;
-        if (index >= flag_.size()) {
-            // @TODO
-            return;
+        // 找到前面最后一个值为flag的元素
+        auto tmp_index= front_one_index;
+        auto front_index = 0;
+        while (tmp_index --) {
+            if (flag_[tmp_index])
+                break;
         }
-        // 前后都需要合并
+        front_index = tmp_index ++;
+
+        if (front_need_marge) {
+            if (back_need_marge) {
+                auto front_it = set_.find({addr_ + front_index,0});
+                auto back_it = set_.find({addr_ + back_index,0});
+
+                auto [addr, front_count] = *front_it;
+                auto [_, back_count] = *back_it;
+                set_.erase(front_it);
+                set_.erase(back_it);
+                set_.insert({addr, front_count + count + back_count});
+            }
+            else {
+                auto front_it = set_.find({addr_ + front_index,0});
+                auto [addr,front_count] = *front_it;
+
+                set_.erase(front_it);
+                set_.insert({addr, front_count + count});
+            }
+
+        }
         else {
-            // 后置位置
-            T *p = addr_ + index;
-
-
+            if (back_need_marge) {
+                // 仅后面需要合并
+                auto back_it = set_.find({addr_ + back_index,0});
+                auto [addr, back_count] = *back_it;
+                set_.erase(back_it);
+                set_.insert({addr, back_count + count});
+            }
+            else {
+                // 前后都不需要合并
+                set_.insert({addr, count});
+            }
         }
+    }
+    void update_memory_pool(T *addr, size_t count, bool is_malloc) {
+        for (long tmp = count - 1; tmp >= 0; -- tmp)
+            flag_[addr - addr_ + count] = is_malloc;
 
+        if (is_malloc) {
+            auto it = std::ranges::find_if(set_, [addr](const MemoryNode &node) {
+                return node.addr == addr;
+            });
+            if (it == set_.end())
+                throw std::runtime_error("can't find this addr");
 
+            auto [addr_back,count_back] = *it;
+            set_.erase(it);
+            set_.insert({addr + count, count_back - count});
+        }
+        else
+            merge(addr,count);
 
 
     }
 public:
-    explicit MemoryPool(const size_t count) : count_(count){
+    explicit MemoryPool(const size_t count) : count_(count) {
         flag_.resize(count_);
-        addr_ = ::malloc(count_ * sizeof(T));
+        addr_ = static_cast<T *>(::malloc(count_ * sizeof(T)));
+        set_.insert({addr_,count});
     }
     ~MemoryPool() {
         delete addr_;
@@ -82,7 +129,7 @@ public:
     }
 
     T *malloc() {
-        auto ret = find_malloc_addr(1);
+        T *ret = find_malloc_addr(1);
         if (ret == nullptr)
             throw std::bad_alloc();
         ::new (ret) T;
