@@ -4,92 +4,80 @@
 *******************************************************************************/
 
 module;
-
-#include <iostream>
+#include <memory>
+#include <vector>
 #include "tools.h"
 export module MemoryPool;
 
-static void *Malloc(size_t size) {
-    void *ret_p = malloc(size);
-    if (ret_p == nullptr) {
-        throw std::bad_alloc();
-    }
-    return ret_p;
-}
 
+/*******************************************************************************
+ * 1、需要分配一大块内存用于存储T类型对象
+ * 2、分配一个对象之后需要返回指向该对象的指针，使得能够索引到该对象，至于析构后该对象不存在，暂不考虑
+ * 3、释放指定对象
+*******************************************************************************/
 NAMESPACE_BEGIN(nl)
-
-
+template <typename T>
 class MemoryPool {
-	size_t block_size_ = 4;
-    size_t block_nums_ = 1024;
-    size_t bit_map_len_ = 0;
-    void *memory_pool_ = nullptr;
-    bool *bit_map_ = nullptr;
-    void *free_stack_ = nullptr;
-    size_t index_ = 0;
+    T *addr_{};
+    size_t count_{};
+    std::vector<bool> flag_;
 
+    // 采用最早适应算法进行分配
+    T *find_malloc_addr(size_t count) {
 
-	MemoryPool(size_t memoryblock_size_ = 4,
-               size_t memoryblock_nums_ = 1024) :
-               block_size_(memoryblock_size_),
-               block_nums_(memoryblock_nums_) {
-
-        bit_map_len_ = memoryblock_nums_;
-        memory_pool_ = Malloc(block_nums_ * block_size_);
-        bit_map_ = (bool *)Malloc(sizeof(bool) * bit_map_len_);
-        std::fill(bit_map_,bit_map_ + bit_map_len_,true);
-        free_stack_ = Malloc(sizeof(void *) * bit_map_len_);
-        std::fill((char *)free_stack_,((char *)free_stack_ + bit_map_len_), (unsigned)0);
-
-        for (int i = 0;i < block_nums_; ++i) {
-            ((char **)free_stack_)[i] = (char *)memory_pool_ + i;
-        }
-        index_ = block_nums_ - 1;
-
-	}
-	MemoryPool(const MemoryPool&) = default;
-	MemoryPool& operator = (const MemoryPool&) = default;
+        return{};
+    }
+    void update_memory_pool(T *addr, size_t count, bool is_malloc) {
+        while (count--)
+            flag_[addr - addr_] = is_malloc;
+    }
 public:
-	~MemoryPool() {
-        delete[] bit_map_;
-        bit_map_ = nullptr;
-        free(memory_pool_);
-        memory_pool_ = nullptr;
-        free(free_stack_);
-        free_stack_ = nullptr;
-	}
-	static MemoryPool& GetInstance() {
-		static MemoryPool *instance = nullptr;
-		if (instance == nullptr) {
-			instance = (MemoryPool *)::malloc(sizeof(MemoryPool));
-            new (instance) MemoryPool(8,10240);
-		}
-		return *instance;
-	}
+    explicit MemoryPool(const size_t count) : count_(count){
+        flag_.resize(count_);
+        addr_ = ::malloc(count_ * sizeof(T));
+    }
+    ~MemoryPool() {
+        delete addr_;
+        addr_ = nullptr;
+    }
+    static std::unique_ptr<MemoryPool>& GetInstance() {
+        static std::unique_ptr<MemoryPool> instance;
+        if (!instance)
+            instance = std::make_unique<MemoryPool>();
+        return instance;
+    }
 
-    void* malloc(size_t size) {
-        if (index_ > block_nums_ || size > block_size_) {
-            return malloc(size);
-        }
-
-        void * ret = (void *)*((intptr_t *)free_stack_ + index_);
-        bit_map_[index_] = false;
-        *((intptr_t **)free_stack_ + index_) = nullptr;
-        index_ --;
+    T *malloc() {
+        auto ret = find_malloc_addr(1);
+        if (ret == nullptr)
+            throw std::bad_alloc();
+        ::new (ret) T;
+        update_memory_pool(ret,1,true);
         return ret;
     }
-	void del(void *ptr) {
-        if (ptr < memory_pool_ || ptr > (char *)memory_pool_ + block_size_ * block_nums_) {
-            free (ptr);
-        }
+    // free中应调用 delete
+    void free(T *addr) {
+        delete addr;
+        update_memory_pool(addr,1,false);
+        return;
+    }
 
-        int index = ((char *)ptr - (char *)memory_pool_) / block_size_;
-        bit_map_[index] = true;
-        *((intptr_t **)free_stack_ + index_++) = (intptr_t*)ptr;
-	}
+    std::tuple<T *,size_t> malloc(size_t count) {
+        auto ret = find_malloc_addr(count);
 
+        for (int i = 0;i < count; ++i)
+            new (ret + i) T();
+
+        update_memory_pool(ret, count, true);
+        return {ret, count};
+    }
+    void free(std::tuple<T *,size_t> addr_info) {
+        auto [addr, count] = addr_info;
+
+        for (int i = 0;i < count; ++i)
+            delete (addr + i);
+
+        update_memory_pool(addr, count, false);
+    }
 };
-
-
 NAMESPACE_END(nl)
