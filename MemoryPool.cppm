@@ -6,6 +6,7 @@
 module;
 #include <memory>
 #include <vector>
+#include <set>
 #include "tools.h"
 export module MemoryPool;
 
@@ -18,18 +19,51 @@ export module MemoryPool;
 NAMESPACE_BEGIN(nl)
 template <typename T>
 class MemoryPool {
+    struct MemoryNode {
+        T *addr;
+        size_t count;
+
+        bool operator < (const MemoryNode &other) const {
+            return count < other.count;
+        }
+    };
+
     T *addr_{};
     size_t count_{};
     std::vector<bool> flag_;
+    std::multiset<MemoryNode> set_;
 
-    // 采用最早适应算法进行分配
+    // 最佳适应算法进行分配内存
     T *find_malloc_addr(size_t count) {
-
-        return{};
+        auto find = set_.lower_bound({nullptr,count});
+        return find != set_.end() ? find->addr : nullptr;
     }
     void update_memory_pool(T *addr, size_t count, bool is_malloc) {
         while (count--)
             flag_[addr - addr_] = is_malloc;
+
+        size_t index = addr - addr_;
+        size_t rindex = flag_.size() - index;
+
+        auto pro = std::ranges::find(flag_.rbegin() + rindex, flag_.rend(), true);
+
+        // 满足条件说明已经是末尾位置了,仅对前面的合并
+        index += count;
+        if (index >= flag_.size()) {
+            // @TODO
+            return;
+        }
+        // 前后都需要合并
+        else {
+            // 后置位置
+            T *p = addr_ + index;
+
+
+        }
+
+
+
+
     }
 public:
     explicit MemoryPool(const size_t count) : count_(count){
