@@ -24,9 +24,6 @@ class MemoryPool {
         bool operator < (const MemoryNode &other) const {
             return count < other.count;
         }
-        bool operator==(const MemoryNode &other) const {
-            return addr == other.addr;
-        }
     };
 
     T *addr_{};
@@ -69,7 +66,11 @@ class MemoryPool {
                 set_.insert({addr, front_count + count + back_count});
             }
             else {
-                auto front_it = set_.find({addr_ + front_index,0});
+                auto front_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
+                    if (node.addr == addr_ + front_index)
+                        return true;
+                    return false;
+                });
                 auto [addr,front_count] = *front_it;
 
                 set_.erase(front_it);
@@ -80,7 +81,11 @@ class MemoryPool {
         else {
             if (back_need_marge) {
                 // 仅后面需要合并
-                auto back_it = set_.find({addr_ + back_index,0});
+                auto back_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
+                    if (node.addr == addr_ + back_index)
+                        return true;
+                    return false;
+                });
                 auto [addr, back_count] = *back_it;
                 set_.erase(back_it);
                 set_.insert({addr, back_count + count});
@@ -99,9 +104,6 @@ class MemoryPool {
             auto it = std::ranges::find_if(set_, [addr](const MemoryNode &node) {
                 return node.addr == addr;
             });
-            if (it == set_.end())
-                throw std::runtime_error("can't find this addr");
-
             auto [addr_back,count_back] = *it;
             set_.erase(it);
             set_.insert({addr + count, count_back - count});
@@ -118,7 +120,7 @@ public:
         set_.insert({addr_,count});
     }
     ~MemoryPool() {
-        delete addr_;
+        ::free(addr_);
         addr_ = nullptr;
     }
     static std::unique_ptr<MemoryPool>& GetInstance() {
@@ -138,7 +140,8 @@ public:
     }
     // free中应调用 delete
     void free(T *addr) {
-        delete addr;
+        (*addr).~T();
+        // delete addr;
         update_memory_pool(addr,1,false);
         return;
     }
@@ -155,8 +158,10 @@ public:
     void free(std::tuple<T *,size_t> addr_info) {
         auto [addr, count] = addr_info;
 
-        for (int i = 0;i < count; ++i)
-            delete (addr + i);
+        for (int i = 0;i < count; ++i) {
+            *(addr + i).~T();
+            free (addr + i);
+        }
 
         update_memory_pool(addr, count, false);
     }
