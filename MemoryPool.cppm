@@ -52,13 +52,20 @@ class MemoryPool {
             if (flag_[tmp_index])
                 break;
         }
-        front_index = tmp_index ++;
+        front_index = ++ tmp_index;
 
         if (front_need_marge) {
             if (back_need_marge) {
-                auto front_it = set_.find({addr_ + front_index,0});
-                auto back_it = set_.find({addr_ + back_index,0});
-
+                auto front_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
+                    if (node.addr == addr_ + front_index)
+                        return true;
+                    return false;
+                });
+                auto back_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
+                    if (node.addr == addr_ + back_index)
+                        return true;
+                    return false;
+                });
                 auto [addr, front_count] = *front_it;
                 auto [_, back_count] = *back_it;
                 set_.erase(front_it);
@@ -141,7 +148,6 @@ public:
     // free中应调用 delete
     void free(T *addr) {
         (*addr).~T();
-        // delete addr;
         update_memory_pool(addr,1,false);
         return;
     }
@@ -158,10 +164,8 @@ public:
     void free(std::tuple<T *,size_t> addr_info) {
         auto [addr, count] = addr_info;
 
-        for (int i = 0;i < count; ++i) {
+        for (int i = 0;i < count; ++i)
             *(addr + i).~T();
-            free (addr + i);
-        }
 
         update_memory_pool(addr, count, false);
     }
