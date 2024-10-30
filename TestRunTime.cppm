@@ -7,9 +7,7 @@ module;
 #include <chrono>
 #include <iostream>
 #include <functional>
-
 #include "tools.h"
-
 export module TestRunTime;
 
 import ProgressBar;
@@ -57,6 +55,5 @@ public:
 
 };
 
-
-NAMESPACE_END()
+NAMESPACE_END(nl)
 
