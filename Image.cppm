@@ -330,11 +330,9 @@ nl::Image& nl::Image::to_binary(int threshold) {
     return *this;
 }
 
-/**
- * @brief 灰度图转伪彩色
-**/
 nl::Image& nl::Image::to_pseudo_color() {
-    cv::applyColorMap(image_, image_, cv::COLORMAP_OCEAN);
+    // cv::applyColorMap(image_, image_, cv::COLORMAP_OCEAN);
+    // @TODO
     return *this;
 }
 
