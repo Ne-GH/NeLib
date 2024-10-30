@@ -7,9 +7,11 @@ module;
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <opencv2/imgproc.hpp>
 #include <ranges>
 #include <set>
 #include <vector>
+
 #include "tools.h"
 export module MemoryPool;
 
@@ -36,71 +38,38 @@ class MemoryPool {
         auto find = set_.lower_bound({nullptr,count});
         return find != set_.end() ? find->addr : nullptr;
     }
-    void merge(T *addr,size_t count) {
-        auto cur_index = addr - addr_;
-        auto back_index = cur_index + count;
-        auto front_one_index = cur_index - 1;
+    void merge_free(T *addr,size_t count) {
+        int cur_index = addr - addr_;
+        int back_index = cur_index + count;
+        int tmp_index = cur_index - 1;
 
-        bool back_need_marge = back_index < flag_.size() && !flag_[back_index];
-        bool front_need_marge = front_one_index >= 0 && !flag_[front_one_index];
+        auto back_ptr = addr + count;
+        // 后面需要合并
+        if (back_ptr != addr + count_ && !flag_[back_index]) {
+            auto back_it = std::ranges::find_if(set_,[back_ptr] (const MemoryNode &node){
+                return node.addr == back_ptr;
+            });
+            auto [back_addr,back_count] = *back_it;
+            set_.erase(back_it);
+            set_.insert({addr,count + back_count});
+        }
 
-
-        // 找到前面最后一个值为flag的元素
-        auto tmp_index= front_one_index;
-        auto front_index = 0;
-        while (tmp_index --) {
-            if (flag_[tmp_index])
+        // 首先先从当前地方向前找到第一个flag_[index]为true的，并+1,得到最后一个值为false的
+        while (tmp_index >= 0 && tmp_index --) {
+            if (flag_[tmp_index] == true)
                 break;
         }
-        front_index = ++ tmp_index;
+        int front_index = ++ tmp_index;
+        auto front_ptr = addr - (cur_index - front_index);
 
-        if (front_need_marge) {
-            if (back_need_marge) {
-                auto front_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
-                    if (node.addr == addr_ + front_index)
-                        return true;
-                    return false;
-                });
-                auto back_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
-                    if (node.addr == addr_ + back_index)
-                        return true;
-                    return false;
-                });
-                auto [addr, front_count] = *front_it;
-                auto [_, back_count] = *back_it;
-                set_.erase(front_it);
-                set_.erase(back_it);
-                set_.insert({addr, front_count + count + back_count});
-            }
-            else {
-                auto front_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
-                    if (node.addr == addr_ + front_index)
-                        return true;
-                    return false;
-                });
-                auto [addr,front_count] = *front_it;
-
-                set_.erase(front_it);
-                set_.insert({addr, front_count + count});
-            }
-
-        }
-        else {
-            if (back_need_marge) {
-                // 仅后面需要合并
-                auto back_it = std::ranges::find_if(set_,[&] (const MemoryNode &node){
-                    if (node.addr == addr_ + back_index)
-                        return true;
-                    return false;
-                });
-                auto [addr, back_count] = *back_it;
-                set_.erase(back_it);
-                set_.insert({addr, back_count + count});
-            }
-            else {
-                // 前后都不需要合并
-                set_.insert({addr, count});
-            }
+        // 前面的需要合并
+        if (front_index != cur_index && !flag_[front_index]) {
+            auto front_it = std::ranges::find_if(set_,[front_ptr] (const MemoryNode &node){
+                return node.addr == front_ptr;
+            });
+            auto [front_addr,front_count] = *front_it;
+            set_.erase(front_it);
+            set_.insert({front_addr,count + front_count});
         }
     }
     void update_memory_pool(T *addr, size_t count, bool is_malloc) {
@@ -115,10 +84,9 @@ class MemoryPool {
             set_.erase(it);
             set_.insert({addr + count, count_back - count});
         }
-        else
-            merge(addr,count);
-
-
+        else {
+            merge_free(addr,count);
+        }
     }
 public:
     explicit MemoryPool(const size_t count) : count_(count) {
@@ -149,7 +117,6 @@ public:
     void free(T *addr) {
         (*addr).~T();
         update_memory_pool(addr,1,false);
-        return;
     }
 
     std::tuple<T *,size_t> malloc(size_t count) {
