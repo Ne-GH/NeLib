@@ -21,6 +21,9 @@ class TestRunTime {
     size_t count_ = 0;
 public:
     explicit TestRunTime(std::function<void()> func) : test_func_(std::move(func)) {  }
+    TestRunTime(std::function<void()> func, size_t count) : test_func_(std::move(func)), count_(count) {
+        start_test();
+    }
     void set_test_count(const size_t count) {
         count_ = count;
     }
@@ -54,6 +57,11 @@ public:
 
 
 };
+
+std::ostream &operator<<(std::ostream &os, const TestRunTime &t) {
+    os << t.count();
+    return os;
+}
 
 NAMESPACE_END(nl)
 
