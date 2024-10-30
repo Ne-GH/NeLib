@@ -29,24 +29,24 @@ public:
     }
 
     void start_test() {
-        auto begin_time = std::chrono::high_resolution_clock::now();
+        auto begin_time = std::chrono::system_clock::now();
         for (size_t i = 0; i < count_; ++i) {
             test_func_();
         }
-        auto end_time = std::chrono::high_resolution_clock::now();
+        auto end_time = std::chrono::system_clock::now();
 
         run_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
     }
 
     void start_test_and_show_progress() {
         nl::ProgressBar pb(count_);
-        const auto begin_time = std::chrono::high_resolution_clock::now();
+        const auto begin_time = std::chrono::system_clock::now();
         for (size_t i = 0; i < count_; ++i) {
             test_func_();
             ++pb;
             std::cout << pb;
         }
-        const auto end_time = std::chrono::high_resolution_clock::now();
+        const auto end_time = std::chrono::system_clock::now();
 
         run_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
     }
