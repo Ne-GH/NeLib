@@ -6,6 +6,7 @@
 module;
 #include <span>
 #include <stdexcept>
+#include <cassert>
 #include <utility>
 #include <vector>
 
@@ -68,8 +69,7 @@ public:
         return *(data_ + row * col_ + col);
     }
     T& at(int row, int col) {
-        if (row * col > count_)
-            throw std::out_of_range("index out of range");
+        assert(row * col >= count_);
         return data_[row * col_ + col];
     }
     T *operator[] (const size_t row) {
