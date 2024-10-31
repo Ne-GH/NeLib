@@ -14,13 +14,13 @@ export
 NAMESPACE_BEGIN(nl)
 
 
-template<typename T>
+template<typename T,size_t N = 2>
 class MultArray {
     T* data_;
     size_t count_;
     std::vector<int> dimensions_;
 public:
-    MultArray(T* p, std::vector<int> dims) : data_(p), dimensions_(std::move(dims)) {
+    MultArray(T* p,const std::vector<int> &dims) : data_(p), dimensions_(std::move(dims)) {
         count_ = 1;
         for (const int val : dimensions_)
             count_ *= val;
@@ -47,5 +47,31 @@ public:
     }
 
 };
+
+
+template<typename T>
+class MultArray<T,2> {
+    T* data_{};
+    int row_{}, col_{};
+    size_t count_{};
+public:
+    MultArray(T* p, const std::vector<int> &dimension) : data_(p) {
+        row_ = dimension[0];
+        col_ = dimension[1];
+
+        count_ = row_ * col_;
+    }
+
+    T& operator()(int row,int col) {
+        return *(data_ + row * col + col);
+    }
+
+    T *operator[] (const size_t row) {
+        return data_ + row * col_;
+    }
+
+};
+
+
 
 NAMESPACE_END(nl)

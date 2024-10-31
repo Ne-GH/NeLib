@@ -122,7 +122,7 @@ nl::Image& nl::Image::zoom(double multiple) {
 
         for (int i = 0; i < new_height; ++i)
             for (int j = 0; j < new_width; ++j)
-                new_data({ i,j }) = src_data({ static_cast<int>(i / multiple),static_cast<int>(j / multiple) });
+                new_data(i,j) = src_data({ static_cast<int>(i / multiple),static_cast<int>(j / multiple) });
 
         image_ = new_image;
     };
@@ -154,7 +154,7 @@ nl::Image& nl::Image::set_image_width(int width) {
 
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                new_data({ i,j }) = src_data({ i,static_cast<int>(j / multiple) });
+                new_data(i,j) = src_data({ i,static_cast<int>(j / multiple) });
 
         image_ = new_image;
     };
@@ -184,7 +184,7 @@ nl::Image& nl::Image::set_image_height(int height) {
 
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                new_data({ i,j }) = src_data({ static_cast<int>(i / multiple), j });
+                new_data(i,j) = src_data({ static_cast<int>(i / multiple), j });
 
         image_ = new_image;
     };
@@ -235,7 +235,7 @@ nl::Image& nl::Image::rotation(int x, int y, int angle) {
                 int dest_x = static_cast<int>(dx * cos(angle_rad) - dy * sin(angle_rad) + x);
                 int dest_y = static_cast<int>(dx * sin(angle_rad) + dy * cos(angle_rad) + y);
                 if (dest_x >= 0 && dest_x < row && dest_y >= 0 && dest_y < col) {
-                    dest_data({ i, j }) = src_data({ dest_x, dest_y });
+                    dest_data(i,j) = src_data({ dest_x, dest_y });
                 }
             }
         }
@@ -257,7 +257,7 @@ nl::Image& nl::Image::reverse_horizontally() {
 
     for (int i = 0; i < row; ++i)
         for (int j = 0; j < col / 2; ++j)
-            std::swap(data({ i,j }) , data({ i,col - j - 1 }));
+            std::swap(data(i,j) , data({ i,col - j - 1 }));
 #endif
     return *this;
 }
@@ -293,9 +293,9 @@ nl::Image& nl::Image::to_grayscale() {
 
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
-            auto pixel = data({ i,j });
+            auto pixel = data(i,j);
             int gray = pixel.R * 0.299 + pixel.G * 0.587 + pixel.B * 0.114;
-            image_data({ i,j }) = gray;
+            image_data(i,j) = gray;
         }
     }
 
@@ -320,10 +320,10 @@ nl::Image& nl::Image::to_binary(int threshold) {
 
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
-            if (data({ i, j }) > threshold)
-                data({ i, j }) = 255;
+            if (data(i,j) > threshold)
+                data(i,j) = 255;
             else
-                data({ i, j }) = 0;
+                data(i,j) = 0;
         }
     }
 #endif
@@ -345,7 +345,7 @@ std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
         auto [data, row, col] = GetImageData<uchar>(image_);
         for (int i = 0; i < row; ++i) {
             for (int j = 0; j < col; ++j) {
-                count[data({ i, j })]++;
+                count[data(i,j)]++;
             }
         }
         return { count };
@@ -356,9 +356,9 @@ std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
         auto [data, row, col] = GetImageData<BGRPixel>(image_);
         for (int i = 0; i < row; ++i) {
             for (int j = 0; j < col; ++j) {
-                (count[B])[data({ i,j }).B]++;
-                (count[G])[data({ i,j }).G]++;
-                (count[R])[data({ i,j }).R]++;
+                (count[B])[data(i,j).B]++;
+                (count[G])[data(i,j).G]++;
+                (count[R])[data(i,j).R]++;
             }
         }
         return count;
