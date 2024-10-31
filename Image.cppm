@@ -90,7 +90,7 @@ public:
 };
 
 
-NAMESPACE_END()
+NAMESPACE_END(nl)
 
 
 template<typename T>

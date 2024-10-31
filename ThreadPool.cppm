@@ -15,6 +15,7 @@ module;
 export module ThreadPool;
 
 
+export
 NAMESPACE_BEGIN(nl)
 class ThreadPool {
     std::vector<std::thread> work_;
@@ -83,5 +84,5 @@ public:
     }
 };
 
-NAMESPACE_END()
+NAMESPACE_END(nl)
 
