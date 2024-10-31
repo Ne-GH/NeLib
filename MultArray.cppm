@@ -4,9 +4,11 @@
 *******************************************************************************/
 
 module;
+#include <span>
+#include <stdexcept>
 #include <utility>
 #include <vector>
-#include <span>
+
 #include "tools.h"
 export module MultArray;
 
@@ -63,9 +65,13 @@ public:
     }
 
     T& operator()(int row,int col) {
-        return *(data_ + row * col + col);
+        return *(data_ + row * col_ + col);
     }
-
+    T& at(int row, int col) {
+        if (row * col > count_)
+            throw std::out_of_range("index out of range");
+        return data_[row * col_ + col];
+    }
     T *operator[] (const size_t row) {
         return data_ + row * col_;
     }
