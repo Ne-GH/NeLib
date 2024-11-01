@@ -85,20 +85,22 @@ public:
     Image &rotation(int x, int y, int angle);
     Image &reverse_horizontally();
     Image &reverse_vertically();
-    Image &to_grayscale();
-    Image &to_hsv();
-    Image &to_binary(int);
-    Image &to_blur();
-    Image &set_brightness(int);
-    Image &set_saturation(double);
-    Image &to_pseudo_color();
-    Image &add(const cv::Scalar &);
+    Image &to_grayscale();          // 转灰度
+    Image &to_hsv();                // 转hsv
+    Image &to_binary(int);          // 转二值图
+    Image &to_pseudo_color();       // 转伪彩色
+    Image &to_blur();               // 转模糊
+    Image &set_brightness(int);     // 设置亮度
+    Image &set_saturation(double);  // 设置饱和度
+    Image &set_contrast(double);    // 设置对比度
+
+    void add(const cv::Scalar &);
     // Image &add(const Image&);
-    Image &sub(const cv::Scalar &);
+    void sub(const cv::Scalar &);
     // Image &sub(const Image&);
-    Image &mul(const cv::Scalar &);
+    void mul(const cv::Scalar &);
     // Image &mul(const Image&);
-    Image &div(const cv::Scalar &);
+    void div(const cv::Scalar &);
     // Image &div(const Image&);
 
     std::vector<std::array<size_t, 256>> get_histogram_data();
@@ -449,24 +451,30 @@ nl::Image& nl::Image::to_blur() {
 }
 
 nl ::Image& nl::Image::set_brightness(const int beta) {
-    cv::add(image_, cv::Scalar(beta,beta,beta), image_);
+    cv::Scalar scalar(beta,beta,beta);
+    add(scalar);
     return *this;
 }
 
 nl::Image& nl::Image::set_saturation(const double alpha) {
-    cv::multiply(image_, alpha, image_);
+    // @TODO 修改饱和度
     return *this;
 }
-nl::Image &nl::Image::add(const cv::Scalar &scalar) {
+nl::Image& nl::Image::set_contrast(const double alpha) {
+    cv::Mat tmp_image = cv::Mat::zeros(image_.size(), image_.type());
+    cv::addWeighted(image_, alpha, tmp_image, 0, 0, image_);
+    return *this;
+}
+void nl::Image::add(const cv::Scalar &scalar) {
     cv::add(image_, scalar, image_);
 }
-nl::Image &nl::Image::sub(const cv::Scalar &scalar) {
+void nl::Image::sub(const cv::Scalar &scalar) {
     cv::subtract(image_, scalar, image_);
 }
-nl::Image &nl::Image::mul(const cv::Scalar &scalar) {
+void nl::Image::mul(const cv::Scalar &scalar) {
     cv::multiply(image_,scalar,image_);
 }
-nl::Image &nl::Image::div(const cv::Scalar &scalar) {
+void nl::Image::div(const cv::Scalar &scalar) {
     cv::divide(image_,scalar,image_);
 }
 nl::Image nl::Image::operator+(const cv::Scalar &scalar) const {
