@@ -23,6 +23,14 @@ class Image {
     };
     enum { B, G, R };
 
+    void add(const cv::Scalar &);
+    // Image &add(const Image&);
+    void sub(const cv::Scalar &);
+    // Image &sub(const Image&);
+    void mul(const cv::Scalar &);
+    // Image &mul(const Image&);
+    void div(const cv::Scalar &);
+    // Image &div(const Image&);
 
 public:
     int row{};
@@ -34,8 +42,12 @@ public:
 
     Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
 
-    Image &operator=(const cv::Mat &image) {
+    Image &operator = (const cv::Mat &image) {
         image_ = image;
+        return *this;
+    }
+    Image &operator = (const cv::Scalar &scalar) {
+        image_ = scalar;
         return *this;
     }
 
@@ -93,26 +105,17 @@ public:
     Image &rotation(int x, int y, int angle);
     Image &reverse_horizontally();
     Image &reverse_vertically();
-    Image &to_grayscale(); // 转灰度
-    Image &to_hsv(); // 转hsv
-    Image &to_binary(int); // 转二值图
-    Image &to_pseudo_color(); // 转伪彩色
-    Image &to_blur(); // 转模糊
-    Image &set_brightness(int); // 设置亮度
-    Image &set_saturation(double); // 设置饱和度
-    Image &set_contrast(double); // 设置对比度
+    Image &to_grayscale();          // 转灰度
+    Image &to_hsv();                // 转hsv
+    Image &to_binary(int);          // 转二值图
+    Image &to_pseudo_color();       // 转伪彩色
+    Image &to_blur();               // 转模糊
+    Image &set_brightness(int);     // 设置亮度
+    Image &set_saturation(double);  // 设置饱和度
+    Image &set_contrast(double);    // 设置对比度
 
     Image &draw_line(cv::Point, cv::Point, cv::Scalar, int);
     Image &draw_rect(cv::Rect, cv::Scalar, int);
-
-    void add(const cv::Scalar &);
-    // Image &add(const Image&);
-    void sub(const cv::Scalar &);
-    // Image &sub(const Image&);
-    void mul(const cv::Scalar &);
-    // Image &mul(const Image&);
-    void div(const cv::Scalar &);
-    // Image &div(const Image&);
 
 
     std::vector<std::array<size_t, 256>> get_histogram_data();
