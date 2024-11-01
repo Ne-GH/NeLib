@@ -121,8 +121,13 @@ public:
     std::vector<Image> split_channels() const;
     Image get_channel_image(int) const;
     Image get_inrange(cv::Scalar, cv::Scalar) const;
-    std::vector<std::array<size_t, 256>> get_histogram_data();
-    cv::Mat get_histogram(int = 100, int = 100);
+
+    // @TODO
+    std::vector<double> get_mean()const;
+    std::vector<double> get_stddev()const;
+
+    std::vector<std::array<size_t, 256>> get_histogram_data() const;
+    Image get_histogram(int = 100, int = 100);
 };
 
 
@@ -377,7 +382,7 @@ nl::Image& nl::Image::to_pseudo_color() {
     return *this;
 }
 
-std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
+std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() const {
     size_t pixel_size = image_.elemSize();
 
     // 灰度图
@@ -407,7 +412,7 @@ std::vector<std::array<size_t, 256>> nl::Image::get_histogram_data() {
     return {};
 }
 
-cv::Mat nl::Image::get_histogram(int width ,int height) {
+nl::Image nl::Image::get_histogram(int width ,int height) {
     auto arrs = get_histogram_data();
 
     cv::Mat ret(height,width,CV_8UC3,cv::Scalar(255,255,255));
@@ -428,7 +433,7 @@ cv::Mat nl::Image::get_histogram(int width ,int height) {
                 unit_width
                 );
         }
-        return ret;
+        return Image(ret);
     }
     else if (arrs.size() == 3) {
         int max1 = *std::ranges::max_element(arrs[0]);
@@ -458,10 +463,10 @@ cv::Mat nl::Image::get_histogram(int width ,int height) {
         func(1,cv::Scalar(0,255,0));
         func(2,cv::Scalar(0,0,255));
 
-        return ret;
+        return Image(ret);
     }
 
-    return ret;
+    return Image(ret);
 }
 
 nl::Image& nl::Image::to_blur() {
@@ -622,3 +627,24 @@ nl::Image nl::Image::get_channel_image(int index) const {
     return Image(ret_mat);
 }
 
+std::vector<double> nl::Image::get_mean()const {
+    cv::Mat mean, tmp;
+    cv::meanStdDev(image_, mean, tmp);
+    std::vector<double> ret;
+    // 将平均值存储到vector中
+    for (int i = 0; i < mean.total(); ++i) {
+        ret.push_back(mean.at<double>(i));
+    }
+    return ret;
+}
+std::vector<double> nl::Image::get_stddev()const{
+    cv::Mat stddev, tmp;
+    cv::meanStdDev(image_, tmp, stddev);
+
+    std::vector<double> ret;
+    // 将平均值存储到vector中
+    for (int i = 0; i < stddev.total(); ++i) {
+        ret.push_back(stddev.at<double>(i));
+    }
+    return ret;
+}
