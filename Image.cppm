@@ -420,7 +420,7 @@ nl::Image nl::Image::get_histogram(int width ,int height) {
 
     if (arrs.size() == 1) {
         auto arr = arrs[0];
-        int max = *std::max_element(arr.begin(),arr.end());
+        int max = *std::ranges::max_element(arr);
 
         for (int i = 0;i < 256; ++i) {
             int cur_height = static_cast<int>(arr[i] * 1.0 / max * height);
