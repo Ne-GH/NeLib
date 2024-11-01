@@ -21,7 +21,6 @@ class Image {
     struct BGRPixel {
         uchar B, G, R;
     };
-    enum { B, G, R };
 
     void add(const cv::Scalar &);
     // Image &add(const Image&);
@@ -33,6 +32,8 @@ class Image {
     // Image &div(const Image&);
 
 public:
+    enum { B, G, R };
+
     int row{};
     int col{};
     Image() = default;
@@ -42,11 +43,11 @@ public:
 
     Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
 
-    Image &operator = (const cv::Mat &image) {
+    Image &operator=(const cv::Mat &image) {
         image_ = image;
         return *this;
     }
-    Image &operator = (const cv::Scalar &scalar) {
+    Image &operator=(const cv::Scalar &scalar) {
         image_ = scalar;
         return *this;
     }
@@ -105,19 +106,20 @@ public:
     Image &rotation(int x, int y, int angle);
     Image &reverse_horizontally();
     Image &reverse_vertically();
-    Image &to_grayscale();          // 转灰度
-    Image &to_hsv();                // 转hsv
-    Image &to_binary(int);          // 转二值图
-    Image &to_pseudo_color();       // 转伪彩色
-    Image &to_blur();               // 转模糊
-    Image &set_brightness(int);     // 设置亮度
-    Image &set_saturation(double);  // 设置饱和度
-    Image &set_contrast(double);    // 设置对比度
+    Image &to_grayscale(); // 转灰度
+    Image &to_hsv(); // 转hsv
+    Image &to_binary(int); // 转二值图
+    Image &to_pseudo_color(); // 转伪彩色
+    Image &to_blur(); // 转模糊
+    Image &set_brightness(int); // 设置亮度
+    Image &set_saturation(double); // 设置饱和度
+    Image &set_contrast(double); // 设置对比度
 
     Image &draw_line(cv::Point, cv::Point, cv::Scalar, int);
     Image &draw_rect(cv::Rect, cv::Scalar, int);
 
-
+    std::vector<Image> split_channels(bool get_gray_image = true) const;
+    Image get_channel_image(int) const ;
     std::vector<std::array<size_t, 256>> get_histogram_data();
     cv::Mat get_histogram(int = 100, int = 100);
 };
@@ -581,4 +583,34 @@ nl::Image &nl::Image::operator ^= (const nl::Image &other) {
     return *this;
 }
 
+std::vector<nl::Image> nl::Image::split_channels(bool get_gray_image) const{
+    std::vector<cv::Mat> vec;
+    cv::split(image_,vec);
+    std::vector<Image> gray_vec{std::make_move_iterator(vec.begin()),std::make_move_iterator(vec.end())};
+    if (get_gray_image)
+        return gray_vec;
+}
+nl::Image nl::Image::get_channel_image(int index) const {
+    if (image_.channels() == 1)
+        return {};
+
+    assert(index < 3);
+    std::vector<cv::Mat> vec;
+    cv::split(image_,vec);
+    if (index == R) {
+        vec[0] = 0;
+        vec[1] = 0;
+    }
+    else if (index == G) {
+        vec[0] = 0;
+        vec[2] = 0;
+    }
+    else if (index == B) {
+        vec[1] = 0;
+        vec[2] = 0;
+    }
+    cv::Mat ret_mat;
+    cv::merge(vec,ret_mat);
+    return Image(ret_mat);
+}
 
