@@ -68,13 +68,21 @@ public:
     static auto get_window(const std::string &window_name) { return cvGetWindowHandle(window_name.data()); }
 
     Image operator+(const cv::Scalar &scalar) const;
-    Image &operator+=(const cv::Scalar &scalar);
     Image operator-(const cv::Scalar &scalar) const;
-    Image &operator-=(const cv::Scalar &scalar);
     Image operator*(const cv::Scalar &scalar) const;
-    Image &operator*=(const cv::Scalar &scalar);
     Image operator/(const cv::Scalar &scalar) const;
+    Image &operator+=(const cv::Scalar &scalar);
+    Image &operator-=(const cv::Scalar &scalar);
+    Image &operator*=(const cv::Scalar &scalar);
     Image &operator/=(const cv::Scalar &scalar);
+
+    Image operator~() const;
+    Image operator&(const Image &other) const;
+    Image operator|(const Image &other) const;
+    Image operator^(const Image &other) const;
+    Image &operator&=(const Image &other);
+    Image &operator|=(const Image &other);
+    Image &operator^=(const Image &other);
 
 
     Image &zoom(double multiple);
@@ -85,14 +93,17 @@ public:
     Image &rotation(int x, int y, int angle);
     Image &reverse_horizontally();
     Image &reverse_vertically();
-    Image &to_grayscale();          // 转灰度
-    Image &to_hsv();                // 转hsv
-    Image &to_binary(int);          // 转二值图
-    Image &to_pseudo_color();       // 转伪彩色
-    Image &to_blur();               // 转模糊
-    Image &set_brightness(int);     // 设置亮度
-    Image &set_saturation(double);  // 设置饱和度
-    Image &set_contrast(double);    // 设置对比度
+    Image &to_grayscale(); // 转灰度
+    Image &to_hsv(); // 转hsv
+    Image &to_binary(int); // 转二值图
+    Image &to_pseudo_color(); // 转伪彩色
+    Image &to_blur(); // 转模糊
+    Image &set_brightness(int); // 设置亮度
+    Image &set_saturation(double); // 设置饱和度
+    Image &set_contrast(double); // 设置对比度
+
+    Image &draw_line(cv::Point, cv::Point, cv::Scalar, int);
+    Image &draw_rect(cv::Rect, cv::Scalar, int);
 
     void add(const cv::Scalar &);
     // Image &add(const Image&);
@@ -102,6 +113,7 @@ public:
     // Image &mul(const Image&);
     void div(const cv::Scalar &);
     // Image &div(const Image&);
+
 
     std::vector<std::array<size_t, 256>> get_histogram_data();
     cv::Mat get_histogram(int = 100, int = 100);
@@ -465,6 +477,15 @@ nl::Image& nl::Image::set_contrast(const double alpha) {
     cv::addWeighted(image_, alpha, tmp_image, 0, 0, image_);
     return *this;
 }
+
+nl::Image &nl::Image::draw_line(cv::Point p1, cv::Point p2, cv::Scalar color, int pen_width) {
+    // @TODO, 绘制直线
+}
+nl::Image &nl::Image::draw_rect(cv::Rect rect, cv::Scalar color, int pen_width = 1) {
+    cv::rectangle(image_,rect,color, pen_width,cv::LINE_8,0);
+    return *this;
+}
+
 void nl::Image::add(const cv::Scalar &scalar) {
     cv::add(image_, scalar, image_);
 }
@@ -477,44 +498,84 @@ void nl::Image::mul(const cv::Scalar &scalar) {
 void nl::Image::div(const cv::Scalar &scalar) {
     cv::divide(image_,scalar,image_);
 }
-nl::Image nl::Image::operator+(const cv::Scalar &scalar) const {
+nl::Image nl::Image::operator + (const cv::Scalar &scalar) const {
     Image tmp;
     tmp.clone_from(*this);
     tmp.add(scalar);
     return tmp;
 }
 
-nl::Image &nl::Image::operator+=(const cv::Scalar &scalar) {
+nl::Image &nl::Image::operator += (const cv::Scalar &scalar) {
     add(scalar);
     return *this;
 }
-nl::Image nl::Image::operator-(const cv::Scalar &scalar) const {
+nl::Image nl::Image::operator - (const cv::Scalar &scalar) const {
     Image tmp;
     tmp.clone_from(*this);
     tmp.sub(scalar);
     return tmp;
 }
-nl::Image &nl::Image::operator-=(const cv::Scalar &scalar) {
+nl::Image &nl::Image::operator -= (const cv::Scalar &scalar) {
     sub(scalar);
     return *this;
 }
-nl::Image nl::Image::operator*(const cv::Scalar &scalar) const {
+nl::Image nl::Image::operator * (const cv::Scalar &scalar) const {
     Image tmp;
     tmp.clone_from(*this);
     tmp.mul(scalar);
     return tmp;
 }
-nl::Image &nl::Image::operator*=(const cv::Scalar &scalar) {
+nl::Image &nl::Image::operator *= (const cv::Scalar &scalar) {
     mul(scalar);
     return *this;
 }
-nl::Image nl::Image::operator/(const cv::Scalar &scalar) const {
-    Image tmp;
+nl::Image nl::Image::operator / (const cv::Scalar &scalar) const {
+    nl::Image tmp;
     tmp.clone_from(*this);
     tmp.div(scalar);
     return tmp;
 }
-nl::Image &nl::Image::operator/=(const cv::Scalar &scalar) {
+nl::Image &nl::Image::operator /= (const cv::Scalar &scalar) {
     div(scalar);
     return *this;
 }
+
+nl::Image nl::Image::operator & (const nl::Image &other) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp &= other;
+    return tmp;
+}
+nl::Image nl::Image::operator | (const nl::Image &other) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp |= other;
+    return tmp;
+}
+nl::Image nl::Image::operator ~ () const {
+    Image tmp;
+    tmp.clone_from(*this);
+    cv::bitwise_not(image_, tmp.image_);
+    return tmp;
+}
+nl::Image nl::Image::operator ^ (const nl::Image &other) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp ^= other;
+    return tmp;
+}
+
+nl::Image &nl::Image::operator &= (const nl::Image &other) {
+    cv::bitwise_and(image_, other.image_, image_);
+    return *this;
+}
+nl::Image &nl::Image::operator |= (const nl::Image &other) {
+    cv::bitwise_or(image_, other.image_, image_);
+    return *this;
+}
+nl::Image &nl::Image::operator ^= (const nl::Image &other) {
+    cv::bitwise_xor(image_, other.image_, image_);
+    return *this;
+}
+
+
