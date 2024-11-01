@@ -118,8 +118,9 @@ public:
     Image &draw_line(cv::Point, cv::Point, cv::Scalar, int);
     Image &draw_rect(cv::Rect, cv::Scalar, int);
 
-    std::vector<Image> split_channels(bool get_gray_image = true) const;
-    Image get_channel_image(int) const ;
+    std::vector<Image> split_channels() const;
+    Image get_channel_image(int) const;
+    Image get_inrange(cv::Scalar, cv::Scalar) const;
     std::vector<std::array<size_t, 256>> get_histogram_data();
     cv::Mat get_histogram(int = 100, int = 100);
 };
@@ -339,6 +340,7 @@ nl::Image& nl::Image::to_hsv() {
     cv::cvtColor(image_, image_, cv::COLOR_BGR2HSV);
 #else
 #endif
+    return *this;
 }
 
 nl::Image& nl::Image::to_binary(int threshold) {
@@ -484,7 +486,8 @@ nl::Image& nl::Image::set_contrast(const double alpha) {
 }
 
 nl::Image &nl::Image::draw_line(cv::Point p1, cv::Point p2, cv::Scalar color, int pen_width) {
-    // @TODO, 绘制直线
+    cv::line(image_, p1, p2, color, pen_width, cv::LINE_8);
+    return *this;
 }
 nl::Image &nl::Image::draw_rect(cv::Rect rect, cv::Scalar color, int pen_width = 1) {
     cv::rectangle(image_,rect,color, pen_width,cv::LINE_8,0);
@@ -583,12 +586,17 @@ nl::Image &nl::Image::operator ^= (const nl::Image &other) {
     return *this;
 }
 
-std::vector<nl::Image> nl::Image::split_channels(bool get_gray_image) const{
+nl::Image nl::Image::get_inrange(cv::Scalar lower, cv::Scalar upper) const{
+    cv::Mat ret;
+    cv::inRange(image_,lower,upper,ret);
+    return Image(ret);
+}
+
+std::vector<nl::Image> nl::Image::split_channels() const{
     std::vector<cv::Mat> vec;
     cv::split(image_,vec);
     std::vector<Image> gray_vec{std::make_move_iterator(vec.begin()),std::make_move_iterator(vec.end())};
-    if (get_gray_image)
-        return gray_vec;
+    return gray_vec;
 }
 nl::Image nl::Image::get_channel_image(int index) const {
     if (image_.channels() == 1)
