@@ -69,7 +69,7 @@ public:
         return *(data_ + row * col_ + col);
     }
     T& at(int row, int col) {
-        assert(row * col >= count_);
+        assert(row * col < count_ && "index out of range");
         return data_[row * col_ + col];
     }
     T *operator[] (const size_t row) {

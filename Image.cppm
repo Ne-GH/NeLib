@@ -21,53 +21,61 @@ class Image {
     struct BGRPixel {
         uchar B, G, R;
     };
-    enum {
-        B, G, R
-    };
+    enum { B, G, R };
 
 
 public:
+    int row{};
+    int col{};
     Image() = default;
-    explicit Image(const std::string &path);
+    explicit Image(const std::string &path) { open(path); }
 
-    Image(const cv::Mat &image) : image_(image) {  };
-    Image& operator = (const cv::Mat image) {
+    explicit Image(const cv::Mat &image) : image_(image), row(image_.rows), col(image_.cols){};
+
+    Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
+
+    Image &operator=(const cv::Mat &image) {
         image_ = image;
         return *this;
     }
 
-    Image& clone_from(const Image& other) {
+    Image &clone_from(const Image &other) {
         image_ = other.image_.clone();
         other.image_.copyTo(image_);
         return *this;
     }
 
-    [[nodiscard]]
-    explicit operator bool() const {
-        return !image_.empty();
-    }
+    [[nodiscard]] explicit operator bool() const { return !image_.empty(); }
 
     void open(const std::string &path) {
         image_ = cv::imread(path);
         if (image_.empty())
             throw std::runtime_error("can't open image");
+        row = image_.rows;
+        col = image_.cols;
     }
     void save(const std::filesystem::path &&path) const { cv::imwrite(path.string(), image_); }
 
     cv::Mat get_mat() { return image_; }
 
-    void show(const std::string & window_name = "image_show") const {
-        cv::imshow(window_name, image_);
-    }
+    void show(const std::string &window_name) const { cv::imshow(window_name, image_); }
 
-    void show_and_wait(const std::string & window_name) const {
+    void show_and_wait(const std::string &window_name) const {
         show(window_name);
         cv::waitKey();
     }
 
-    static auto get_window(const std::string &window_name) {
-        return cvGetWindowHandle(window_name.data());
-    }
+    static auto get_window(const std::string &window_name) { return cvGetWindowHandle(window_name.data()); }
+
+    Image operator+(const cv::Scalar &scalar) const;
+    Image &operator+=(const cv::Scalar &scalar);
+    Image operator-(const cv::Scalar &scalar) const;
+    Image &operator-=(const cv::Scalar &scalar);
+    Image operator*(const cv::Scalar &scalar) const;
+    Image &operator*=(const cv::Scalar &scalar);
+    Image operator/(const cv::Scalar &scalar) const;
+    Image &operator/=(const cv::Scalar &scalar);
+
 
     Image &zoom(double multiple);
     Image &set_image_width(int width);
@@ -78,30 +86,33 @@ public:
     Image &reverse_horizontally();
     Image &reverse_vertically();
     Image &to_grayscale();
+    Image &to_hsv();
     Image &to_binary(int);
     Image &to_blur();
     Image &set_brightness(int);
     Image &set_saturation(double);
     Image &to_pseudo_color();
+    Image &add(const cv::Scalar &);
+    // Image &add(const Image&);
+    Image &sub(const cv::Scalar &);
+    // Image &sub(const Image&);
+    Image &mul(const cv::Scalar &);
+    // Image &mul(const Image&);
+    Image &div(const cv::Scalar &);
+    // Image &div(const Image&);
+
     std::vector<std::array<size_t, 256>> get_histogram_data();
-    cv::Mat get_histogram(int = 100,int = 100);
-
-
+    cv::Mat get_histogram(int = 100, int = 100);
 };
 
 
 NAMESPACE_END(nl)
 
 
-template<typename T>
+template <typename T>
 std::tuple<nl::MultArray<T>,int,int> GetImageData(const cv::Mat &image) {
     nl::MultArray<T> data(reinterpret_cast<T *>(image.data), { image.rows, image.cols });
     return { data, image.rows, image.cols };
-}
-
-
-nl::Image::Image(const std::string &path) {
-    open(path);
 }
 
 nl::Image& nl::Image::zoom(double multiple) {
@@ -263,20 +274,20 @@ nl::Image& nl::Image::reverse_horizontally() {
 }
 
 // 该函数实现比cv::flip快约40%
+// @TODO, 疑似未支持灰度图
 nl::Image& nl::Image::reverse_vertically() {
     int row = image_.rows, col = image_.cols;
     uchar* data = image_.data;
     auto buf = new uchar[col * 3];
 
 #define LINE(num) ((num) * col * 3)
-
     for (int i = 0; i < row / 2; ++i) {
         memcpy(buf,                         &data[LINE(i)],             col * 3);
         memcpy(&data[LINE(i)],              &data[LINE(row - i - 1)],   col * 3);
         memcpy(&data[LINE(row - i - 1)],    buf,                        col * 3);
     }
-
 #undef LINE
+
     delete[] buf;
 
     return *this;
@@ -302,6 +313,13 @@ nl::Image& nl::Image::to_grayscale() {
     image_ = image;
 #endif
     return *this;
+}
+
+nl::Image& nl::Image::to_hsv() {
+#ifdef USE_OPENCV_LIB
+    cv::cvtColor(image_, image_, cv::COLOR_BGR2HSV);
+#else
+#endif
 }
 
 nl::Image& nl::Image::to_binary(int threshold) {
@@ -331,8 +349,10 @@ nl::Image& nl::Image::to_binary(int threshold) {
 }
 
 nl::Image& nl::Image::to_pseudo_color() {
-    // cv::applyColorMap(image_, image_, cv::COLORMAP_OCEAN);
-    // @TODO
+#ifdef USE_OPENCV_LIB
+    cv::cvtColor(image_, image_, cv::COLOR_GRAY2BGR);
+#else
+#endif
     return *this;
 }
 
@@ -435,5 +455,58 @@ nl ::Image& nl::Image::set_brightness(const int beta) {
 
 nl::Image& nl::Image::set_saturation(const double alpha) {
     cv::multiply(image_, alpha, image_);
+    return *this;
+}
+nl::Image &nl::Image::add(const cv::Scalar &scalar) {
+    cv::add(image_, scalar, image_);
+}
+nl::Image &nl::Image::sub(const cv::Scalar &scalar) {
+    cv::subtract(image_, scalar, image_);
+}
+nl::Image &nl::Image::mul(const cv::Scalar &scalar) {
+    cv::multiply(image_,scalar,image_);
+}
+nl::Image &nl::Image::div(const cv::Scalar &scalar) {
+    cv::divide(image_,scalar,image_);
+}
+nl::Image nl::Image::operator+(const cv::Scalar &scalar) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp.add(scalar);
+    return tmp;
+}
+
+nl::Image &nl::Image::operator+=(const cv::Scalar &scalar) {
+    add(scalar);
+    return *this;
+}
+nl::Image nl::Image::operator-(const cv::Scalar &scalar) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp.sub(scalar);
+    return tmp;
+}
+nl::Image &nl::Image::operator-=(const cv::Scalar &scalar) {
+    sub(scalar);
+    return *this;
+}
+nl::Image nl::Image::operator*(const cv::Scalar &scalar) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp.mul(scalar);
+    return tmp;
+}
+nl::Image &nl::Image::operator*=(const cv::Scalar &scalar) {
+    mul(scalar);
+    return *this;
+}
+nl::Image nl::Image::operator/(const cv::Scalar &scalar) const {
+    Image tmp;
+    tmp.clone_from(*this);
+    tmp.div(scalar);
+    return tmp;
+}
+nl::Image &nl::Image::operator/=(const cv::Scalar &scalar) {
+    div(scalar);
     return *this;
 }

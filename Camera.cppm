@@ -111,7 +111,7 @@ public:
 
         cv::waitKey(8);
     }
-    void show(const std::string &&window_name) {
+    void show(const std::string &window_name) {
         for (auto it = begin(); it != end(); ++it) {
             cv::imshow(window_name, (*it).get_mat());
             for_each_wait();
