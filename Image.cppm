@@ -112,9 +112,9 @@ public:
     Image &zoom(double multiple);
     Image &set_image_width(int width);
     Image &set_image_height(int height);
-    Image &resize(int width, int height);
-    Image &rotation(int angle);
-    Image &rotation(int x, int y, int angle);
+    Image &resize(int width, int height,int inter_type = cv::INTER_LINEAR);
+    Image &rotation(int angle, bool resize = false);
+    Image &rotation(double x, double y, int angle, bool resize = false);
     Image &reverse_horizontally();
     Image &reverse_vertically();
     Image &to_grayscale(); // 转灰度
@@ -254,9 +254,9 @@ nl::Image& nl::Image::set_image_height(int height) {
     return *this;
 }
 
-nl::Image& nl::Image::resize(int width, int height) {
+nl::Image& nl::Image::resize(int width, int height,int inter_type) {
 #ifdef USE_OPENCV_LIB
-    cv::resize(image_, image_, cv::Size(width, height));
+    cv::resize(image_, image_, cv::Size(width, height),0,0, inter_type);
 #else
     set_image_width(width);
     set_image_height(height);
@@ -264,16 +264,30 @@ nl::Image& nl::Image::resize(int width, int height) {
     return *this;
 }
 
-nl::Image& nl::Image::rotation(int angle) {
-    rotation(image_.rows / 2, image_.cols / 2, angle);
+nl::Image& nl::Image::rotation(int angle, bool resize) {
+    rotation(image_.cols / 2, image_.rows / 2, angle, resize);
     return *this;
 }
 
-nl::Image& nl::Image::rotation(int x, int y, int angle) {
+nl::Image& nl::Image::rotation(double x, double y, int angle, bool resize) {
 #ifdef USE_OPENCV_LIB
-    cv::Point2f center(x, y);
-    cv::Mat matrix = cv::getRotationMatrix2D(center, angle, 1.0);
-    cv::warpAffine(image_, image_, matrix, image_.size());
+    cv::Mat matrix = cv::getRotationMatrix2D(cv::Point2f(x,y), angle, 1.0);
+
+    if (resize) {
+        double angle_rad = angle * CV_PI / 180;
+        double abs_cos = std::abs(std::cos(angle_rad));
+        double abs_sin = std::abs(std::sin(angle_rad));
+        int new_width = image_.cols * abs_cos + image_.rows * abs_sin;
+        int new_height = image_.rows * abs_cos + image_.cols * abs_sin;
+        matrix.at<double>(0,2) += (new_width - image_.cols) / 2;
+        matrix.at<double>(1,2) += (new_height - image_.rows) / 2;
+
+        cv::warpAffine(image_, image_, matrix, {new_width, new_height});
+    }
+    else {
+        cv::warpAffine(image_, image_, matrix, image_.size());
+    }
+
 #else
     auto rotation = [&] <typename T>{
         auto [src_data, row, col] = GetImageData<T>(image_);
