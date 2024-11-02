@@ -4,14 +4,10 @@
 *******************************************************************************/
 
 module;
-#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui_c.h>
-import MultArray;
-#include <oneapi/tbb/detail/_template_helpers.h>
-
-
 #include "tools.h"
+import MultArray;
 export module Image;
 
 #define USE_OPENCV_LIB true
@@ -47,8 +43,8 @@ public:
 
     Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
 
-    Image(const Image &image,int x,int y,int width,int height) {
-        cv::Rect rect(x,y,width,height);
+    Image(const Image &image, int x, int y, int width, int height) {
+        cv::Rect rect(x, y, width, height);
         image_ = cv::Mat(image.image_, rect);
         row = image_.rows;
         col = image_.cols;
@@ -78,7 +74,7 @@ public:
         row = image_.rows;
         col = image_.cols;
     }
-    void save(const std::filesystem::path &&path) const { cv::imwrite(path.string(), image_); }
+    void save(const std::string &path) const { cv::imwrite(path, image_); }
 
     cv::Mat get_mat() { return image_; }
 
@@ -126,17 +122,18 @@ public:
     Image &to_binary(int); // 转二值图
     Image &to_pseudo_color(); // 转伪彩色
     Image &to_blur(); // 转模糊
+    Image &to_normalize(double, double, int); // 归一化
     Image &set_brightness(int); // 设置亮度
     Image &set_saturation(double); // 设置饱和度
     Image &set_contrast(double); // 设置对比度
 
-    Image &draw_line(cv::Point, cv::Point, const cv::Scalar&, int);
+    Image &draw_line(cv::Point, cv::Point, const cv::Scalar &, int);
     Image &draw_circle(cv::Point, int, cv::Scalar, int);
     Image &draw_ellipse(cv::RotatedRect, cv::Scalar, int);
     Image &draw_rect(cv::Rect, cv::Scalar, int);
     Image &draw_polyline(const std::vector<cv::Point> &, cv::Scalar, int, bool = true);
     Image &draw_contours(const std::vector<cv::Point> &, cv::Scalar, int);
-    Image &draw_contours(const std::vector<std::vector<cv::Point>>&contours, cv::Scalar,int);
+    Image &draw_contours(const std::vector<std::vector<cv::Point>> &contours, cv::Scalar, int);
 
 
     std::vector<Image> split_channels() const;
@@ -151,7 +148,11 @@ public:
 };
 
 
-
+Image &Image::to_normalize(double alpha, double beat, int type){
+    image_.convertTo(image_, CV_32F);
+    cv::normalize(image_, image_, alpha, beat, type);
+    return *this;
+}
 NAMESPACE_END(nl)
 
 
