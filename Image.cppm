@@ -7,8 +7,11 @@ module;
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui_c.h>
-#include "tools.h"
 import MultArray;
+#include <oneapi/tbb/detail/_template_helpers.h>
+
+
+#include "tools.h"
 export module Image;
 
 #define USE_OPENCV_LIB true
@@ -43,6 +46,13 @@ public:
     explicit Image(const cv::Mat &image) : image_(image), row(image_.rows), col(image_.cols){};
 
     Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
+
+    Image(const Image &image,int x,int y,int width,int height) {
+        cv::Rect rect(x,y,width,height);
+        image_ = cv::Mat(image.image_, rect);
+        row = image_.rows;
+        col = image_.cols;
+    }
 
     Image &operator=(const cv::Mat &image) {
         image_ = image;
@@ -80,6 +90,10 @@ public:
     }
 
     static auto get_window(const std::string &window_name) { return cvGetWindowHandle(window_name.data()); }
+
+    static void set_mouse_callback(const std::string &window_name, cv::MouseCallback callback) {
+        cv::setMouseCallback(window_name, callback);
+    }
 
     Image operator+(const cv::Scalar &scalar) const;
     Image operator-(const cv::Scalar &scalar) const;
