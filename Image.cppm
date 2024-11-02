@@ -4,16 +4,17 @@
 *******************************************************************************/
 
 module;
-#include "tools.h"
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui_c.h>
-#include <filesystem>
+#include "tools.h"
 import MultArray;
 export module Image;
 
 #define USE_OPENCV_LIB true
 
-export NAMESPACE_BEGIN(nl)
+export
+NAMESPACE_BEGIN(nl)
 
 class Image {
     cv::Mat image_;
@@ -115,20 +116,26 @@ public:
     Image &set_saturation(double); // 设置饱和度
     Image &set_contrast(double); // 设置对比度
 
-    Image &draw_line(cv::Point, cv::Point, cv::Scalar, int);
+    Image &draw_line(cv::Point, cv::Point, const cv::Scalar&, int);
+    Image &draw_circle(cv::Point, int, cv::Scalar, int);
+    Image &draw_ellipse(cv::RotatedRect, cv::Scalar, int);
     Image &draw_rect(cv::Rect, cv::Scalar, int);
+    Image &draw_polyline(const std::vector<cv::Point> &, cv::Scalar, int, bool = true);
+    Image &draw_contours(const std::vector<cv::Point> &, cv::Scalar, int);
+    Image &draw_contours(const std::vector<std::vector<cv::Point>>&contours, cv::Scalar,int);
+
 
     std::vector<Image> split_channels() const;
     Image get_channel_image(int) const;
     Image get_inrange(cv::Scalar, cv::Scalar) const;
 
-    // @TODO
-    std::vector<double> get_mean()const;
-    std::vector<double> get_stddev()const;
+    std::vector<double> get_mean() const;
+    std::vector<double> get_stddev() const;
 
     std::vector<std::array<size_t, 256>> get_histogram_data() const;
     Image get_histogram(int = 100, int = 100);
 };
+
 
 
 NAMESPACE_END(nl)
@@ -490,15 +497,40 @@ nl::Image& nl::Image::set_contrast(const double alpha) {
     return *this;
 }
 
-nl::Image &nl::Image::draw_line(cv::Point p1, cv::Point p2, cv::Scalar color, int pen_width) {
+nl::Image &nl::Image::draw_line(cv::Point p1, cv::Point p2, const cv::Scalar& color, int pen_width) {
     cv::line(image_, p1, p2, color, pen_width, cv::LINE_8);
     return *this;
 }
+nl::Image &nl::Image::draw_circle(cv::Point center, int r, cv::Scalar color,int pen_width) {
+    cv::circle(image_, center, r, color, pen_width, cv::LINE_8);
+    return *this;
+}
+
 nl::Image &nl::Image::draw_rect(cv::Rect rect, cv::Scalar color, int pen_width = 1) {
     cv::rectangle(image_,rect,color, pen_width,cv::LINE_8,0);
     return *this;
 }
 
+nl::Image &nl::Image::draw_contours(const std::vector<cv::Point> &points, cv::Scalar color, int pen_width) {
+    draw_contours(std::vector<std::vector<cv::Point>>{points},color,pen_width);
+    return *this;
+}
+nl::Image &nl::Image::draw_contours(const std::vector<std::vector<cv::Point>> &contours, cv::Scalar color, int pen_width){
+    cv::drawContours(image_,contours,-1,color,pen_width);
+    return *this;
+}
+
+nl::Image &nl::Image::draw_polyline(const std::vector<cv::Point> &points, cv::Scalar color, int pen_width, bool is_closed){
+    if (pen_width <= 0)
+        cv::fillPoly(image_,points,color);
+    else
+        cv::polylines(image_, points,is_closed,color,pen_width);
+    return *this;
+}
+nl::Image &nl::Image::draw_ellipse(cv::RotatedRect rect, cv::Scalar color, int pen_width){
+    cv::ellipse(image_,rect,color,pen_width);
+    return *this;
+}
 void nl::Image::add(const cv::Scalar &scalar) {
     cv::add(image_, scalar, image_);
 }
