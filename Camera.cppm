@@ -82,6 +82,9 @@ public:
             throw std::runtime_error("can't open camera");
         is_stop = false;
     }
+    ~Camera() {
+        camera_.release();
+    }
 
     iterator begin() {
         return iterator(this);
@@ -100,11 +103,14 @@ public:
         auto cur_time = camera_.get(cv::CAP_PROP_POS_MSEC);
         return cur_frame / (cur_time / 1000);
     }
-    size_t width() {
+    size_t width() const {
         return static_cast<int>(camera_.get(cv::CAP_PROP_FRAME_WIDTH));
     }
-    size_t height() {
+    size_t height() const {
         return static_cast<int>(camera_.get(cv::CAP_PROP_FRAME_HEIGHT));
+    }
+    size_t count() const {
+        return static_cast<int>(camera_.get(cv::CAP_PROP_FRAME_COUNT));
     }
 
 
@@ -119,6 +125,7 @@ public:
     void stop() {
         is_stop = true;
     }
+
     void show(const std::string &window_name) {
         for (auto it = begin(); it != end(); ++it) {
             cv::imshow(window_name, (*it).get_mat());
