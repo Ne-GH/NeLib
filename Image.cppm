@@ -7,8 +7,8 @@ module;
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui_c.h>
 #include "tools.h"
-import MultArray;
 export module Image;
+import MultArray;
 
 #define USE_OPENCV_LIB true
 

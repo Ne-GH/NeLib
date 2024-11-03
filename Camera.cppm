@@ -4,19 +4,17 @@
 *******************************************************************************/
 
 module;
-
-
-
 #include <opencv2/opencv.hpp>
 #include "tools.h"
-import Image;
 export module Camera;
+import Image;
 
 export
 NAMESPACE_BEGIN(nl)
 
 class Camera {
     cv::VideoCapture camera_;
+    bool is_stop = true;
 
     class iterator {
         Image image_;
@@ -41,10 +39,13 @@ class Camera {
             return *this;
         }
         bool operator != (const iterator& other) const {
-            return true;
+            return !parent_->is_stop;
         }
         Image& operator*() {
             return image_;
+        }
+        Image* operator->() {
+            return &image_;
         }
 
     };
@@ -63,6 +64,10 @@ class Camera {
             cv::flip((*it_).get_mat(), (*it_).get_mat(), 1);
             return *it_;
         }
+        Image *operator->() {
+            cv::flip((*it_).get_mat(), (*it_).get_mat(), 1);
+            return &(*it_);
+        }
     };
 
 public:
@@ -73,9 +78,9 @@ public:
         camera_ = cv::VideoCapture(0, cv::CAP_V4L2);
 #endif
 
-        if (!camera_.isOpened()) {
+        if (!camera_.isOpened())
             throw std::runtime_error("can't open camera");
-        }
+        is_stop = false;
     }
 
     iterator begin() {
@@ -110,6 +115,9 @@ public:
         // 15  fps : wait 66
 
         cv::waitKey(8);
+    }
+    void stop() {
+        is_stop = true;
     }
     void show(const std::string &window_name) {
         for (auto it = begin(); it != end(); ++it) {
