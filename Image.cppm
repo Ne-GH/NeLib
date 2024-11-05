@@ -47,11 +47,15 @@ public:
     int row{};
     int col{};
     Image() = default;
-    explicit Image(const std::string &path) { open(path); }
+    explicit Image(const std::string &path) {
+        open(path);
+    }
 
-    explicit Image(const cv::Mat &image) : image_(image), row(image_.rows), col(image_.cols){};
+    explicit Image(const cv::Mat &image) : image_(image), row(image_.rows), col(image_.cols) {  }
 
-    Image(int width, int height, int type = CV_8UC3) { image_ = cv::Mat(height, width, type); }
+    Image(int width, int height, int type = CV_8UC3) {
+        image_ = cv::Mat(height, width, type);
+    }
 
     Image(const Image &image, int x, int y, int width, int height) {
         cv::Rect rect(x, y, width, height);
@@ -77,7 +81,9 @@ public:
     }
 
     [[nodiscard]]
-    explicit operator bool() const { return !image_.empty(); }
+    explicit operator bool() const {
+        return !image_.empty();
+    }
 
     void open(const std::string &path) {
         image_ = cv::imread(path);
@@ -90,9 +96,13 @@ public:
         cv::imwrite(path, image_);
     }
 
-    cv::Mat get_mat() { return image_; }
+    cv::Mat get_mat() {
+        return image_;
+    }
 
-    void show(const std::string &window_name) const { cv::imshow(window_name, image_); }
+    void show(const std::string &window_name) const {
+        cv::imshow(window_name, image_);
+    }
 
     void show_and_wait(const std::string &window_name) const {
         show(window_name);
@@ -184,7 +194,6 @@ public:
         cv::bitwise_xor(image_, other.image_, image_);
         return *this;
     }
-
 
     Image &zoom(double multiple) {
 #ifdef USE_OPENCV_LIB
@@ -351,7 +360,6 @@ public:
 #endif
         return *this;
     }
-
     // 该函数实现比cv::flip快约40%
     // @TODO, 疑似未支持灰度图
     Image &reverse_vertically() {
@@ -494,7 +502,6 @@ public:
         cv::drawContours(image_,contours,-1,color,pen_width);
         return *this;
     }
-
 
     std::vector<Image> split_channels() const {
         std::vector<cv::Mat> vec;
