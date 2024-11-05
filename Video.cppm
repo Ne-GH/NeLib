@@ -7,10 +7,9 @@ module;
 #include <thread>
 #include <opencv2/opencv.hpp>
 #include "tools.h"
-
+export module Video;
 import Image;
 import Camera;
-export module Video;
 
 export
 NAMESPACE_BEGIN(nl)
