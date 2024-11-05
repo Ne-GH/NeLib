@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.29)
 project(NeLib)
 
+set(VERSION "1.0.0")
 set(CMAKE_CXX_STANDARD 23)
 
 find_package(OpenCV REQUIRED)
