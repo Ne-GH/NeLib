@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 project(NeLib)
 
-# set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 set(VERSION "1.0.0")
 set(CMAKE_CXX_STANDARD 23)
 find_package(OpenCV REQUIRED)
@@ -20,7 +19,9 @@ target_sources(NeLib
     FILE_SET cxx_modules TYPE CXX_MODULES FILES
     ${module_files}
 )
-
+target_link_libraries(NeLib
+    ${OpenCV_LIBS}
+)
 target_compile_features(NeLib PUBLIC cxx_std_23)
 
 install(TARGETS  ${PROJECT_NAME}  DESTINATION /usr/lib EXPORT ${PROJECT_NAME} FILE_SET cxx_modules)
