@@ -15,12 +15,12 @@
 - [x] MemoryPool
 
 # 安装
-git clong http://github.com/hexne/NeLib.git
-cd NeLib
-mkdir build && cd build
-cmake .. -G Ninja -DCMAKE_CXX_COMPILER=/usr/bin/clang++
-cmake --build .
-sudo cmake --install .
+git clone https://github.com/hexne/NeLib.git  
+cd NeLib  
+mkdir build && cd build  
+cmake .. -G Ninja -DCMAKE_CXX_COMPILER=/usr/bin/clang++  
+cmake --build .  
+sudo cmake --install .  
 
 
 # 使用
