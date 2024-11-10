@@ -1,26 +1,26 @@
 @PACKAGE_INIT@
+include ( "${CMAKE_CURRENT_LIST_DIR}/NeLib.cmake" )
 
-# 设置库的版本号和导入目标
-set(NeLib_VERSION "1.0.0")
-set(NeLib_SOVERSION "1.0")
-
-find_library(NeLib_LIBRARIES
-    NAMES libNeLib.a # 根据实际生成的库名进行调整
-    HINTS ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
-)
-
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(NeLib
-    REQUIRED_VARS NeLib_LIBRARIES
-    VERSION_VAR NeLib_VERSION
-)
-
-if(NeLib_FOUND)
-    add_library(NeLib::NeLib INTERFACE IMPORTED)
-    set_target_properties(NeLib::NeLib PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}"
-        IMPORTED_LOCATION "${NeLib_LIBRARIES}"
-        INTERFACE_LINK_LIBRARIES "OpenCV::opencv_core" # 如果你的库依赖于 OpenCV，添加此依赖项提示
-    )
-endif()
-
+# set(NeLib_VERSION "1.0.0")
+# set(NeLib_SOVERSION "1.0")
+# 
+# find_library(NeLib_LIBRARIES
+#     NAMES libNeLib.a
+#     HINTS ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
+# )
+# 
+# include(FindPackageHandleStandardArgs)
+# find_package_handle_standard_args(NeLib
+#     REQUIRED_VARS NeLib_LIBRARIES
+#     VERSION_VAR NeLib_VERSION
+# )
+# 
+# if(NeLib_FOUND)
+#     add_library(NeLib::NeLib INTERFACE IMPORTED)
+#     set_target_properties(NeLib::NeLib PROPERTIES
+#         INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}"
+#         IMPORTED_LOCATION "${NeLib_LIBRARIES}"
+#         INTERFACE_LINK_LIBRARIES "OpenCV::opencv_core"
+#     )
+# endif()
+# 
