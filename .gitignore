@@ -36,3 +36,5 @@
 out/
 CMakeLists.txt.user
 cmake-build-debug
+
+build
