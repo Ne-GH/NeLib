@@ -24,7 +24,8 @@ target_link_libraries(NeLib
 )
 target_compile_features(NeLib PUBLIC cxx_std_23)
 
-install(TARGETS  ${PROJECT_NAME}  DESTINATION /usr/lib EXPORT ${PROJECT_NAME} FILE_SET cxx_modules)
+install(FILES "tools.h" DESTINATION /usr/lib/NeLib)
+install(TARGETS  ${PROJECT_NAME}  DESTINATION /usr/lib/NeLib EXPORT ${PROJECT_NAME} FILE_SET cxx_modules)
 install(EXPORT ${PROJECT_NAME} DESTINATION /usr/lib/cmake/NeLib/)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/NeLibConfig.cmake"
         DESTINATION "${test_INSTALL_DIR}/lib/cmake/NeLib/")
