@@ -119,7 +119,6 @@ private:
         return { std::get<0>(pos),std::get<1>(pos) };
     }
 
-    [[noreturn]]
     void listen_event() {
         ClickEvent right_click_event;
         ClickEvent left_click_event;
