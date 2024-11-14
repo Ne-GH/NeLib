@@ -6,6 +6,7 @@
 module;
 #include <vector>
 #include <thread>
+#include <algorithm>
 #include <queue>
 #include <functional>
 #include <mutex>
