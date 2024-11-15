@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.29)
 project(NeLib)
 
 set(VERSION "1.0.0")
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 find_package(OpenCV REQUIRED)
 
 add_library(NeLib STATIC )
@@ -22,7 +22,7 @@ target_sources(NeLib
 target_link_libraries(NeLib
     ${OpenCV_LIBS}
 )
-target_compile_features(NeLib PUBLIC cxx_std_23)
+target_compile_features(NeLib PUBLIC cxx_std_20)
 
 install(FILES "tools.h" DESTINATION /usr/lib/NeLib)
 install(TARGETS  ${PROJECT_NAME}  DESTINATION /usr/lib/NeLib EXPORT ${PROJECT_NAME} FILE_SET cxx_modules)
