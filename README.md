@@ -24,7 +24,7 @@ sudo cmake --install .
 
 
 # 使用
-CMakeLists.txt
+### CMakeLists.txt
 ```
 cmake_minimum_required(VERSION 3.29)
 project(untitled)
@@ -42,4 +42,19 @@ target_link_libraries(untitled
     NeLib
 )
 
+```
+### xmake
+```
+add_rules("mode.release", "mode.debug")
+
+add_repositories("nelib ~/Projects/xmake-repo")
+
+set_languages("c++2b")
+add_requires("nelib 2024.11.15", {configs = {modules = true}})
+
+target("test")
+    set_kind("binary")
+    add_files("src/*.cpp")
+    add_packages("nelib")
+    set_policy("build.c++.modules", true)
 ```
