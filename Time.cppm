@@ -3,11 +3,13 @@
  * Data   : 2023/12/03
 *******************************************************************************/
 module;
-#include <chrono>
-#include <set>
-#include <functional>
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <functional>
 #include <mutex>
+#include <ranges>
+#include <set>
 #include <thread>
 #include "tools.h"
 export module Time;
@@ -31,30 +33,68 @@ export
 NAMESPACE_BEGIN(nl)
 
 class Time {
-    std::chrono::time_point<std::chrono::system_clock> time_point{};
+    std::chrono::zoned_time<std::chrono::system_clock::duration> time_;
 public:
     Time() {
-        time_point = std::chrono::system_clock::now();
+        time_ = std::chrono::zoned_time(std::chrono::current_zone()->name(),std::chrono::system_clock::now());
+    }
+    Time(const Time& time) : time_(time.time_) {  }
+    explicit Time(const std::chrono::zoned_time<std::chrono::system_clock::duration> &time) : time_(time) {  }
+
+    explicit Time(const std::chrono::time_point<std::chrono::system_clock> time) : time_(time) {  }
+    explicit Time(const std::string &time_str) {
+        std::vector<std::string> time_node;
+
+        std::string tmp;
+        for (const char ch : time_str) {
+            if (ch == ' ' || ch == ':' || ch == '-') {
+                time_node.push_back(tmp);
+                tmp.clear();
+                continue;
+            }
+            if (ch < '0' || ch > '9')
+                throw std::invalid_argument("invalid time string");
+            tmp += ch;
+        }
+        time_node.push_back(tmp);
+
+        if (time_node.size() != 6)
+            throw std::invalid_argument("invalid time string");
+
+        auto ymd = std::chrono::year_month_day(
+                std::chrono::year(std::stoi(time_node[0])),
+                std::chrono::month(std::stoi(time_node[1])),
+                std::chrono::day(std::stoi(time_node[2]))
+            );
+        auto hms = std::chrono::hh_mm_ss<std::chrono::seconds>(
+                std::chrono::seconds{
+                    std::stoi(time_node[3]) * 3600 + std::stoi(time_node[4]) * 60 + std::stoi(time_node[5])
+                }
+            );
+        time_ = typename std::chrono::local_time<std::chrono::seconds>::time_point(std::chrono::local_days(ymd).time_since_epoch() + hms.to_duration());
     }
 
-    explicit Time(const std::chrono::time_point<std::chrono::system_clock> arg) : time_point(arg) {  }
-
-    Time operator - (const Time& t) const {
-        return Time(std::chrono::time_point<std::chrono::system_clock>(time_point - t.time_point));
+    Time operator - (const Time& time) const {
+        return Time(std::chrono::time_point<std::chrono::system_clock>(time_.get_local_time() - time.time_.get_local_time()));
     }
 
     template<CountType T = std::chrono::milliseconds>
     size_t count() {
-        return std::chrono::duration_cast<T>(time_point.time_since_epoch()).count();
+        return std::chrono::duration_cast<T>(time_.get_local_time().time_since_epoch()).count();
     }
 
     Time& to_now() {
-        time_point = std::chrono::system_clock::now();
+        time_ = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
         return *this;
     }
 
-    friend std::ostream& operator << (std::ostream& out, Time time) {
-        out << std::format("{:%T}", time.time_point);
+    friend std::ostream& operator << (std::ostream& out,const Time &time) {
+        const std::chrono::year_month_day ymd{std::chrono::floor<std::chrono::days>(time.time_.get_local_time())};
+        out << ymd << ' ';
+
+        const std::chrono::hh_mm_ss hms{std::chrono::floor<std::chrono::seconds>(time.time_.get_local_time()) - std::chrono::floor<std::chrono::days>(time.time_.get_local_time())};
+        out << hms;
+
         return out;
     }
 
