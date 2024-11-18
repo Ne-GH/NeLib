@@ -42,6 +42,10 @@ public:
     explicit Time(const std::chrono::zoned_time<std::chrono::system_clock::duration> &time) : time_(time) {  }
 
     explicit Time(const std::chrono::time_point<std::chrono::system_clock> time) : time_(time) {  }
+
+    /**
+     * @param time_str format need "year-month-day hour:minute:second"
+    **/
     explicit Time(const std::string &time_str) {
         std::vector<std::string> time_node;
 
