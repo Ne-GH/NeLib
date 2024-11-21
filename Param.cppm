@@ -5,9 +5,10 @@
 
 module;
 
-#include <vector>
-#include <string>
 #include <functional>
+#include <iostream>
+#include <string>
+#include <vector>
 
 
 #include "tools.h"
@@ -17,20 +18,32 @@ export module Param;
 export
 NAMESPACE_BEGIN(nl)
 class Param {
-    std::pmr::vector<std::string> params_;
+    std::vector<std::string> params_;
 public:
     Param(const int argc,const char *const argv[]) {
         for (int i = 0;i < argc; ++i)
-            params_.emplace_back(argv[i]);
+            params_.push_back(argv[i]);
     }
 
-    void add_param_callback(const std::initializer_list<std::string> params,const std::function<void()> callback) {
-        for (const auto& param : params) {
-            if (std::ranges::find(params_,param) != params_.end()) {
-                callback();
-                return;
-            }
+    template<int index>
+    void add_param_callback_impl(auto &&tuple, std::function<void(const std::string &)> func) {
+        if constexpr (index + 1 >= std::tuple_size_v<std::remove_reference_t<decltype(tuple)>> ) {
+            return;
         }
+        else {
+            func(std::get<index>(tuple));
+            add_param_callback_impl<index+1>(tuple, func);
+        }
+    }
+
+    void add_param_callback(auto &&... args) {
+        auto tuple = std::forward_as_tuple(args...);
+        auto callback = std::get<sizeof ...(args) - 1>(tuple);
+        add_param_callback_impl<0>(std::forward_as_tuple(args...), [this,&callback] (const std::string &str){
+            if (std::ranges::find(params_,str) != params_.end()) {
+                callback();
+            }
+        });
     }
 
     [[nodiscard]]
