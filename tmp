@@ -1,3 +1,0 @@
-in instantiation of variable template specialization
-    'std::tuple_size_v<std::tuple<std::tuple<const char (&)[3], const char (&)[4], (lambda at /home/yongheng/Projects/untitled/main.cpp:50:42) &> &> &&>'
-        requested here
