@@ -4,13 +4,9 @@
 *******************************************************************************/
 
 module;
-
-#include <functional>
-#include <iostream>
 #include <string>
 #include <vector>
-
-
+#include <functional>
 #include "tools.h"
 export module Param;
 
