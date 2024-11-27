@@ -448,6 +448,11 @@ public:
         cv::GaussianBlur(image_, image_, cv::Size(3, 3), 11, 11);
         return *this;
     }
+    // 高斯双边模糊
+    Image &to_gaussian_filter_blur() {
+        cv::bilateralFilter(image_,image_,0 , 100, 10);
+        return *this;
+    }
     // 归一化，进行该操作后，图像类型变为F32
     Image &to_normalize(double alpha, double beat, int type) {
         image_.convertTo(image_, CV_32F);
@@ -502,6 +507,15 @@ public:
         cv::drawContours(image_,contours,-1,color,pen_width);
         return *this;
     }
+
+
+    int get_width() const {
+        return image_.cols;
+    }
+    int get_height() const {
+        return image_.rows;
+    }
+
 
     std::vector<Image> split_channels() const {
         std::vector<cv::Mat> vec;
@@ -589,7 +603,7 @@ public:
         }
         return {};
     }
-    Image get_histogram(int width = 100, int height = 100) {
+    Image get_histogram(int width = 200, int height = 100) {
         auto arrs = get_histogram_data();
 
         cv::Mat ret(height,width,CV_8UC3,cv::Scalar(255,255,255));
@@ -644,6 +658,14 @@ public:
         }
 
         return Image(ret);
+    }
+    Image get_histogram_equalization(int width = 200, int height = 100) {
+        Image ret;
+        ret.clone_from(*this);
+        // @TODO , 直方图均衡化暂仅支持灰度图
+        // ret.to_grayscale();
+        cv::equalizeHist(ret.image_,ret.image_);
+        return ret.get_histogram(width,height);
     }
 };
 
