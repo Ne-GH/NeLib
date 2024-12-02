@@ -18,9 +18,7 @@ class AverageQueue {
 	int front_{}, rear_{};
 public:
 
-	AverageQueue() {
-
-	}
+    AverageQueue() = default;
 
 	AverageQueue(const std::initializer_list<T> &init_list) {
 		if (init_list.size() > max_size_)
