@@ -4,13 +4,13 @@
 - [x] Video
 - [x] File
 - [x] MultArray
-- [x] ProgressBar
+- [x] ProgressBar <sup> @TODO, 应当优化进度条的显示
 - [x] StringEncrypt
 - [x] BigNumber
 - [x] Time
 - [x] TestRunTime
-- [x] Mouse <sup> @TODO, linux版本未实现
-- [x] EventListener <sup> @TODO, linux版本未实现
+- [x] Mouse <sup> @TODO, linux版本未实现, 无需终端版本
+- [x] EventListener <sup> @TODO, linux版本未实现, 应当实现一个windows/linux的终端版本
 - [x] ThreadPool
 - [x] MemoryPool
 - [ ] TerminalMenu <sup> @TODO, 不能使用键盘上下按键进行选择
