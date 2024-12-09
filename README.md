@@ -14,6 +14,7 @@
 - [x] ThreadPool
 - [x] MemoryPool
 - [ ] TerminalMenu <sup> @TODO, 不能使用键盘上下按键进行选择
+- [ ] NeuralNetwork<sup> @TODO
 
 # 安装
 git clone https://github.com/hexne/NeLib.git  

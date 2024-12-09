@@ -6,6 +6,8 @@
 
 module;
 #include <array>
+#include <stdexcept>
+
 #include "tools.h"
 export module AverageQueue;
 
@@ -39,14 +41,15 @@ public:
 			front_ %= max_size_;
 		}
 	}
-	T operator()() {
-		int size = this->size();
-		T ret{};
-		for (int i = 0; i < size; ++i) {
-			int pos = (front_ + i) % max_size_;
-			ret += data_[pos];
-		}
-		return ret / size;
+
+    T get_average() {
+	    int size = this->size();
+	    T ret{};
+	    for (int i = 0; i < size; ++i) {
+	        int pos = (front_ + i) % max_size_;
+	        ret += data_[pos];
+	    }
+	    return ret / size;
 	}
 
 
