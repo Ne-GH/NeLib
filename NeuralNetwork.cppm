@@ -4,7 +4,7 @@
 *******************************************************************************/
 
 module;
-#include <array>
+#include <vector>
 
 #include "tools.h"
 export module NeuralNetwork;
@@ -12,13 +12,34 @@ export module NeuralNetwork;
 export
 NAMESPACE_BEGIN(nl)
 
-template<std::size_t ...Args>
+template <typename ... Args>
 class NeuralNetwork {
-    std::array<double, sizeof...(Args)> weights;
+    std::vector<std::vector<double>> weights_;
+
+
+    template <size_t ... index>
+    void neural_network_impl(auto &&tuple, std::index_sequence<index...>) {
+        (weights_[index].resize(std::get<index>(tuple)), ...);
+    }
+
+public:
+    NeuralNetwork(std::vector<size_t> weights) {
+        weights_.resize(weights.size());
+        for (int i = 0; i < weights.size(); i++) {
+            weights_[i].resize(weights[i]);
+        }
+    }
+    NeuralNetwork(Args && ... args) {
+        weights_.resize(sizeof...(args));
+        auto tuple = std::forward_as_tuple(args...);
+        auto callback = std::get<sizeof ...(args) - 1>(tuple);
+        neural_network_impl(tuple, std::make_index_sequence<sizeof...(args) - 1>());
+
+    }
 };
 /*******************************************************************************
 
-NeuralNetwork<2,3,5,1>
+NeuralNetwork nn({1,2,3,4})
 
 *******************************************************************************/
 
