@@ -23,7 +23,7 @@ class MultArray {
     size_t count_;
     std::vector<int> dimensions_;
 public:
-    MultArray(T* p,const std::vector<int> &dims) : data_(p), dimensions_(std::move(dims)) {
+    MultArray(T* p,const std::vector<size_t> &dims) : data_(p), dimensions_(std::move(dims)) {
         count_ = 1;
         for (const int val : dimensions_)
             count_ *= val;
@@ -58,11 +58,19 @@ class MultArray<T,2> {
     int row_{}, col_{};
     size_t count_{};
 public:
-    MultArray(T* p, const std::vector<int> &dimension) : data_(p) {
+    MultArray() {  }
+
+    MultArray(T* p, const std::vector<size_t> &dimension) : data_(p) {
         row_ = dimension[0];
         col_ = dimension[1];
 
         count_ = row_ * col_;
+    }
+    MultArray(const MultArray &&arr) {
+        data_ = arr.data_;
+        row_ = arr.row_;
+        col_ = arr.col_;
+        count_ = arr.count_;
     }
 
     T& operator()(int row,int col) {
