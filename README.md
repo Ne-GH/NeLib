@@ -4,17 +4,18 @@
 - [x] Video
 - [x] File
 - [x] MultArray
-- [x] ProgressBar <sup> @TODO, 应当优化进度条的显示
 - [x] StringEncrypt
 - [x] BigNumber
 - [x] Time
 - [x] TestRunTime
-- [x] Mouse <sup> @TODO, linux版本未实现, 无需终端版本
-- [x] EventListener <sup> @TODO, linux版本未实现, 应当实现一个windows/linux的终端版本
 - [x] ThreadPool
 - [x] MemoryPool
+- [x] Mouse <sup> @TODO, linux版本未实现, 无需终端版本
+- [x] EventListener <sup> @TODO, linux版本未实现, 应当实现一个windows/linux的终端版本
+- [x] ProgressBar <sup> @TODO, 应当优化进度条的显示
 - [ ] TerminalMenu <sup> @TODO, 不能使用键盘上下按键进行选择
-- [ ] NeuralNetwork<sup> @TODO
+- [ ] Matrix <sup> @TODO , 作为神经网络的前置内容
+- [ ] NeuralNetwork <sup> @TODO BP神经网络
 
 # 安装
 git clone https://github.com/hexne/NeLib.git  
