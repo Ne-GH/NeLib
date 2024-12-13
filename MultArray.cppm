@@ -21,7 +21,7 @@ template<typename T,size_t N = 2>
 class MultArray {
     T* data_;
     size_t count_;
-    std::vector<int> dimensions_;
+    std::vector<size_t> dimensions_;
 public:
     MultArray(T* p,const std::vector<size_t> &dims) : data_(p), dimensions_(std::move(dims)) {
         count_ = 1;
@@ -60,17 +60,17 @@ class MultArray<T,2> {
 public:
     MultArray() {  }
 
-    MultArray(T* p, const std::vector<size_t> &dimension) : data_(p) {
-        row_ = dimension[0];
-        col_ = dimension[1];
+    MultArray(T* p, int row, int col) : data_(p) , row_(row), col_(col) , count_(row * col) {  }
 
-        count_ = row_ * col_;
-    }
-    MultArray(const MultArray &&arr) {
+    MultArray(const MultArray &arr) {
         data_ = arr.data_;
         row_ = arr.row_;
         col_ = arr.col_;
         count_ = arr.count_;
+    }
+    MultArray& operator= (const MultArray &arr) {
+        new (this) MultArray(arr);
+        return *this;
     }
 
     T& operator()(int row,int col) {
@@ -81,6 +81,9 @@ public:
         return data_[row * col_ + col];
     }
     T *operator[] (const size_t row) {
+        return data_ + row * col_;
+    }
+    const T* operator[] (const size_t row) const {
         return data_ + row * col_;
     }
 

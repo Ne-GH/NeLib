@@ -14,7 +14,7 @@ import MultArray;
 
 template <typename T>
 std::tuple<nl::MultArray<T>,int,int> GetImageData(const cv::Mat &image) {
-    nl::MultArray<T> data(reinterpret_cast<T *>(image.data), { image.rows, image.cols });
+    nl::MultArray<T> data(reinterpret_cast<T *>(image.data), image.rows, image.cols);
     return { data, image.rows, image.cols };
 }
 
