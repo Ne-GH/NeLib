@@ -5,6 +5,8 @@
 
 module;
 #include <vector>
+#include <tuple>
+#include <array>
 
 #include "tools.h"
 export module NeuralNetwork;
@@ -12,6 +14,10 @@ export module NeuralNetwork;
 export
 NAMESPACE_BEGIN(nl)
 
+/*******************************************************************************
+NeuralNetwork nn({1,2,3,4})
+*******************************************************************************/
+/*
 template <typename ... Args>
 class NeuralNetwork {
     std::vector<std::vector<double>> weights_;
@@ -37,13 +43,16 @@ public:
 
     }
 };
-/*******************************************************************************
+*/
 
-NeuralNetwork nn({1,2,3,4})
+template <std::size_t ...N>
+class NeuralNetwork {
+    std::tuple<std::array<double,N> ...> weights_;
+    std::size_t layout_count_ = sizeof ... (N);
+public:
+    NeuralNetwork() = default;
 
-*******************************************************************************/
-
-
+};
 
 NAMESPACE_END(nl)
 
