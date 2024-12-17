@@ -36,21 +36,13 @@ struct NeuralNetworkHelper<Last> {
 
 template <std::size_t... N>
 class NeuralNetwork {
-    NeuralNetworkHelper<N ...>::type weights_;
-    std::tuple<std::array<double, N> ...> intputs_;
+    typename NeuralNetworkHelper<N ...>::type weights_;
+    std::tuple<std::array<double, N> ...> inputs_;
     std::tuple<std::array<double, N> ...> outputs_;
     size_t layout_count_ = sizeof ... (N);
 
 public:
     NeuralNetwork() = default;
-    template <size_t Index = 0>
-    void forward() {
-        if constexpr (Index < sizeof ... (N) - 1) {
-            auto cur_martix = std::get<Index>(weights_);
-            std::cout << cur_martix.size() << std::endl;
-            forward<Index + 1>();
-        }
-    }
 
 };
 
